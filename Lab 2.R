@@ -67,7 +67,7 @@ p
 #############################################
 
 tab2 <- read_excel("tab2e.xls", sheet = "tab2e_16 years and older", 
-                   range = cell_rows(15:1173), col_names=FALSE)
+                   range = cell_rows(11:1173), col_names=FALSE)
 tab2
 
 tab2 <- tab2 %>%
@@ -75,14 +75,36 @@ tab2 <- tab2 %>%
   na.omit(tab2)
 tab2  
 
-tab2 %>% 
+tab2 <- tab2 %>% 
   filter(X__3 == "Total") %>%
   arrange(X__11) %>%
   mutate(X__12 = X__4 * X__11)
+tab2
   
 tax <- read_excel("tax.xlsx", range = cell_rows(10:299),
                   col_names = FALSE)
 tax
 tax <- tax %>%
-  select(X__1, X__8)
+  mutate(X__2 = X__1, X_8 = X__8)%>%
+  select(X__2, X_8)
 tax
+
+tab <- left_join(tab2, tax, "X__2")
+tab
+
+tab <- tab %>%
+  mutate(X_8 = replace(X_8, X_8 == "..", NA)) %>%
+  mutate(X__13 = as.numeric(X_8)/X__4)
+tab
+
+tab %>%
+  ggplot() +
+  geom_point(mapping = aes(x = X__11, y = X__13))
+
+tab %>%
+  group_by(X_8) %>%
+  count(X_8) %>%
+  View() ## 123 NAs
+
+tab2 %>%
+  arrange(X__12)
