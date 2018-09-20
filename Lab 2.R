@@ -2,7 +2,8 @@ install_github("ankargren/StatProg")
 library(StatProg)
 library(tidyverse)
 library(devtools)
-library(ggthemes)
+library(readr)
+library(readxl)
 data(senate)
 
 #############################################
@@ -14,7 +15,7 @@ data(senate)
 p <- ggplot(data = senate, mapping = aes(
   x = presidential_approval, 
   y = election_result)) + 
-  geom_jitter(colour = "gray53", alpha = 0.7, size = 3)
+  geom_point(colour = "gray53", alpha = 0.7, size = 3)
 p
 
 ### Adding labels and caption ###
@@ -66,15 +67,22 @@ p
 #############################################
 
 tab2 <- read_excel("tab2e.xls", sheet = "tab2e_16 years and older", 
-                   range = cell_rows(16:1173), col_names = FALSE)
+                   range = cell_rows(15:1173), col_names=FALSE)
 tab2
 
+tab2 <- tab2 %>%
+  fill(X__1, X__2) %>%
+  na.omit(tab2)
+tab2  
 
-
-
-
-
-
-
-
-
+tab2 %>% 
+  filter(X__3 == "Total") %>%
+  arrange(X__11) %>%
+  mutate(X__12 = X__4 * X__11)
+  
+tax <- read_excel("tax.xlsx", range = cell_rows(10:299),
+                  col_names = FALSE)
+tax
+tax <- tax %>%
+  select(X__1, X__8)
+tax
