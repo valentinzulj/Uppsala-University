@@ -61,8 +61,8 @@ int
                 ################# Stratified t-test #################
                 #####################################################
                   
-  
-  
+getwd()  
+setwd("U:\Downloads\Uppsala-University-Labs (1).zip\Uppsala-University-Labs")
   
   
   
