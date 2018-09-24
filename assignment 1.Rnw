@@ -1,0 +1,13 @@
+\documentclass{article}
+\usepackage{graphicx}
+
+\title{Statistical Programming with R \\ Assignment 1 \\ }
+\author{Valentin Zulj och Vilgot Österlund
+\date{\today}
+
+\begin{document}
+
+
+
+
+\end{document}
