@@ -105,11 +105,10 @@ int
 @
 
 \noindent Note that in this case, $\hat{\beta}_{1}$ should be interpreted as the the intercept of the regression model.
-
 \section{A Two-sample t-test for Stratified Data}
 In this task, we were asked to write a function that computes t-tests, and can do so for data that is either stratified or not stratified. We begin by demonstrating the way in which we wrote the code used for stratified data, then move on the ordinary t-test, and finally we combine them into a \texttt{t\_test()} function.
 
-\subsection{Stratified Data}
+\subsection{Stratified Data} \label{sec:strat}
 We begin by sampling a set of stratified data to be used in our calculations:
 <<>>=
 set.seed(2018)
@@ -122,24 +121,122 @@ strat <- tibble(x = c(rnorm(200, 25), rnorm(200, 45), rnorm(200, 75)),
 \noindent Having done that, we need to subset the data, so that we can calculate the test using the formulae given in the assignment. First, we group our data treatment and then by stratum, and calculate the values of $\bar{x}$, $n$, and $s^{2}$ for every stratum:
 
 <<>>=
-d <- strat %>%
+d <- strat                    %>%
   group_by(treatment, strata) %>%
-  summarize(n = length(strata), # Computing n
-           s2 = var (x),        # Computing sample variances
-           m = mean(x))         # Computing sample means
+  summarize(n = length(strata),   # Computing n
+           s2 = var (x),          # Computing sample variances
+           m = mean(x))           # Computing sample means
 d
 @
 
 \noindent In moving on, we group the remaining data set by strata, and calculate the sums and products given in the formulae:
+
 <<>>=
-d <- d %>%
-   group_by(strata) %>%
-  mutate(sprod = s2*n) %>%
+d <- d                          %>%
+  group_by(strata)              %>%
+  mutate(sprod = s2*n)          %>%
   summarize(nsum = sum(n),          # Summing number of obs
             rnsum = sum(n) - 2,     # Subtracting 2
             ssum = sum(sprod),      # Summing the n-variance products
             nprod = prod(n),        # Multiplying the number of obs
             mdiff = m[1]-m[2])      # Computing the difference in means
+@
+
+<<>>=
 d
 @
+
+\noindent Now, what we need to do is calculate the weights and the estimate the variances for each stratum, we do this using the formulae given in the assignment, and the following code:
+<<>>=
+d <- d                                              %>%
+    mutate(weights = (nprod/nsum) / sum(nprod/nsum),      # Computing weights    
+            sigma2 = (nsum/nprod) * (ssum/rnsum))   %>%   # Computing sigma2
+    select(mdiff, weights, sigma2)
+d
+@
+\noindent As can be seen from the tibble printed above, we have managed to calculate the weights, estimators of the variances, and differences beteen means, which are the last components needed in order to calculate the t-statistic. We calculate the statistic like this:
+
+<<>>=
+d <- d                                        %>%
+  summarize(numerator = sum(weights * mdiff),
+                  denominator = sqrt(sum((weights^2) * sigma2)),
+                  t_stat = numerator/denominator,    # Test statistic
+                  stratified = TRUE)          %>%    # Logical statement
+        select(t_stat, stratified)
+d
+@
+
+\noindent And find the result given in a tibble showing the test statistic itself, and a logical statement indicating whether the statistic has been computed using the method for stratified data sets.
+
+In the following section, we will present a method of calculating an ordinary two-sample t-tes, which is a simpler for, of what we have shown above.
+\newpage
+
+\subsection{Classical t-test}
+Again, we begin by simulating a data set that we can use for our calculations:
+
+<<>>=
+set.seed(2018)
+test <- tibble(x = c(rnorm(200, 25), rnorm(200, 45), rnorm(200, 75)),
+               treatment = rep(1:2, 300))
+@
+
+\noindent Then we group our data by treatment only, since there are no strata, and carry on as we did in Section~\ref{sec:strat}. Hence, our code will not be broken up and commented as much as above. 
+<<>>=
+t <- test                           %>%
+    group_by(treatment)             %>%
+    summarize(n = length(treatment),
+                  s2 = var(x),
+                  m = mean(x))      %>%
+    mutate(sprod = s2*n)            %>%
+    summarize(nsum = sum(n),            # Summing number of obs
+                  rnsum = sum(n) - 2,       # Subtracting 2
+                  ssum = sum(sprod),        # Summing the n-variance products
+                  nprod = prod(n),          # Multiplying the number of obs
+                  mdiff = m[1]-m[2])        # Difference in means
+@
+This chunk of code will do the exact same thing as it did above, calculating $\bar{x}$, $n$, $s^{2}$ as well as the different sums and products needed to compute the test statistic. What is worth noting, however, is that in the following code, the weights will be given as one, seeing as we have no strata to use:
+
+<<>>=
+t <- t %>%
+mutate(weights = (nprod/nsum)/sum(nprod/nsum),     # Computing weights    
+               sigma2 = (nsum/nprod)*(ssum/rnsum)) # Computing sigma2
+t
+@
+\noindent And finally, we compute the t-statistic:
+
+<<>>=
+t <- t                                %>%
+  select(mdiff, weights, sigma2)      %>%
+  summarize(numerator = sum(weights*mdiff),
+                  denominator = sqrt(sum(weights^2*sigma2)),
+                  t_stat = numerator/denominator, # Test statistic
+                  stratified = FALSE) %>%         # Logical statement
+  select(t_stat, stratified)
+@
+
+\noindent Once again producing a tibble containing the test statistic and a logical statement showing that the stratified t-test has not been used.
+
+<<>>=
+t
+@
+
+Now, the only thing left to do is put everything together in a function. This will be done i Section~\ref{sec:tfunc}
+
+\section{\textttt{t\_test} Function}\label{sec:tfunc}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 \end{document}
