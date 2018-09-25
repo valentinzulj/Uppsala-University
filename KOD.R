@@ -1,14 +1,14 @@
 library(tidyverse)            
 
 
-                #####################################################
-                ################# Linear Regression #################
-                #####################################################
+#####################################################
+################# Linear Regression #################
+#####################################################
 
 linear_regression <- function(data, dep, indep, intercept = TRUE) {
   y <- as.matrix(data[, dep])
   x <- as.matrix(data[, indep])
-    if (intercept == TRUE) { x <- cbind(1, x)
+  if (intercept == TRUE) { x <- cbind(1, x)
   }
   beta <- c(solve(crossprod(x)) %*% crossprod(x, y))
   fits <- x %*% beta
@@ -17,21 +17,21 @@ linear_regression <- function(data, dep, indep, intercept = TRUE) {
   se <- sqrt(diag(sigma2 * solve(crossprod(x))))
   names(beta) <- colnames(x)
   return_obj <- list(beta = beta, se = se,
-                   residuals = c(resids), fitted = c(fits),
-                   sigma = sqrt(sigma2), dep = dep, indep = indep,
-                   intercept = intercept, y = c(y))
-class(return_obj) <- "linear_regression"
-return(return_obj)
+                     residuals = c(resids), fitted = c(fits),
+                     sigma = sqrt(sigma2), dep = dep, indep = indep,
+                     intercept = intercept, y = c(y))
+  class(return_obj) <- "linear_regression"
+  return(return_obj)
 }
 
 A <- data.frame(Y = rexp(100, rate =2), # Depentent variable
-                   X1 = rnorm(100),     # Independent variable
-                   X2 = rnorm(100, mean = 4, sd = 2) # Dependent variable
-                )
+                X1 = rnorm(100),     # Independent variable
+                X2 = rnorm(100, mean = 4, sd = 2) # Dependent variable
+)
 
 lin_mod <- linear_regression(data = A, dep = 1, # y variable is first columnt in 'data'
-                  indep = c(2,3)                # regressors are in columns two and three
-                            )
+                             indep = c(2,3)                # regressors are in columns two and three
+)
 
 ci <- function(lin_mod, pos, alfa){
   i <- pos # Default means that pos = 1 gives interval for the intercept 
@@ -45,7 +45,7 @@ ci <- function(lin_mod, pos, alfa){
   
   return(out)
 } 
-  
+
 print.linear_regression_ci <- function(obj){ # Adjusting the printing method of the new output class
   print(paste0("A ", obj$c_level, # Gives the confidence level of the interval 
                "% confidence interval for beta_", 
@@ -60,39 +60,84 @@ print.linear_regression_ci <- function(obj){ # Adjusting the printing method of 
 int <- ci(lin_mod, 1, 0.05)
 int 
 
-                #####################################################
-                ################# Stratified t-test #################
-                #####################################################
-                  
+#####################################################
+################# Stratified t-test #################
+#####################################################
+
 set.seed(2018)
 strat <- tibble(x = c(rnorm(200, 25), rnorm(200, 45), rnorm(200, 75)),
                 treatment = rep(1:2, 300),
                 strata = c(rep(1, 200), rep(2, 200), rep(3, 200)))
 
+#####################################################
+################# SURPRIIIIIISE!!!! #################
+#####################################################
+
+
+t_test <- function(data){
+  if(is.tibble(data) & is.data.frame(data)){ 
+    if(any(colnames(data) == "strata")){ # Stratified t-test
+      d <- data %>%
+        group_by(treatment, strata) %>%
+        summarize(n = length(strata),     # Computing n
+                  s2 = var(x),            # Computing s-squared
+                  m = mean(x)) %>%        # Computing x-bar
+        group_by(strata) %>%
+        mutate(sprod = s2*n) %>%          # Multiplying n by variance
+        summarize(nsum = sum(n),          # Summing number of obs
+                  rnsum = sum(n) - 2,     # Subtracting 2
+                  ssum = sum(sprod),      # Summing the n-variance products
+                  nprod = prod(n),        # Multiplying the number of obs
+                  mdiff = m[1]-m[2]) %>%  # Difference in means
+        mutate(weights = (nprod/nsum)/sum(nprod/nsum),  # Computing weights    
+               sigma2 = (nsum/nprod)*(ssum/rnsum)) %>%  # Computing sigma2
+        select(mdiff, weights, sigma2) %>%
+        summarize(numerator = sum(weights*mdiff),
+                  denominator = sqrt(sum(weights^2*sigma2)),
+                  t_stat = numerator/denominator,  # Test statistic
+                  stratified = TRUE) %>%           # Logical statement
+        select(t_stat, stratified)
+      return(d)
+    } else {
+      print("Testing to see if this works")
+    } # Closes simple t-test
+    
+  } 
+  else {
+    print("Data input needs to be a tibble or a data frame")
+  } # Closes if statement
+} #Closes function
+
+t_test(strat)
+
+
+
+###################### Lite rester ########################
 
 strat <- strat %>%
   group_by(treatment, strata) %>%
-  summarize(n = length(strata), #computing n
-            s2 = var(x), # Computing s-squared
-            m = mean(x)) %>% # Computing x-bar
+  summarize(n = length(strata),     # Computing n
+            s2 = var(x),            # Computing s-squared
+            m = mean(x)) %>%        # Computing x-bar
   group_by(strata) %>%
-  mutate(sprod = s2*n) #multiplying n by variance
-strat  
+  mutate(sprod = s2*n) %>%          # Multiplying n by variance
+  summarize(nsum = sum(n),          # Summing number of obs
+            rnsum = sum(n) - 2,     # Subtracting 2
+            ssum = sum(sprod),      # Summing the n-variance products
+            nprod = prod(n),        # Multiplying the number of obs
+            mdiff = m[1]-m[2])      # Difference in means
+strat
 
+strat <- strat %>%
+  mutate(weights = (nprod/nsum)/sum(nprod/nsum),  # Computing weights    
+         sigma2 = (nsum/nprod)*(ssum/rnsum)) %>%  # Computing sigma2
+  select(mdiff, weights, sigma2)
 
-for(i in unique(strat$strata)){
-strat %>%
-    filter(strata == i) %>%
-    summarize(nsum = sum(n),      # Summing number of obs
-              rnsum = sum(n) - 2, # Subtracting 2
-              ssum = sum(sprod),  # Summing the n-variance products
-              nprod = prod(n)) %>% # Multiplying the number of obs
-  print()
-}  
+strat
 
-
-
-
-
-
-  
+strat <- strat %>%
+  summarize(numerator = sum(weights*mdiff),
+            denominator = sqrt(sum(weights^2*sigma2)),
+            t_stat = numerator/denominator)
+strat
+d
