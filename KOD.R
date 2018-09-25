@@ -69,9 +69,11 @@ strat <- tibble(x = c(rnorm(200, 25), rnorm(200, 45), rnorm(200, 75)),
                 treatment = rep(1:2, 300),
                 strata = c(rep(1, 200), rep(2, 200), rep(3, 200)))
 
-#####################################################
-################# SURPRIIIIIISE!!!! #################
-#####################################################
+set.seed(2018)
+test <- tibble(x = c(rnorm(200, 25), rnorm(200, 45), rnorm(200, 75)),
+               treatment = rep(1:2, 300))
+
+vilgot <- 1:500
 
 
 t_test <- function(data){
@@ -99,45 +101,39 @@ t_test <- function(data){
         select(t_stat, stratified)
       return(d)
     } else {
-      print("Testing to see if this works")
-    } # Closes simple t-test
+      t <- data %>%
+        group_by(treatment) %>%
+        summarize(n = length(treatment),
+                  s2 = var(x),
+                  m = mean(x)) %>%
+        mutate(sprod = s2*n) %>%
+        summarize(nsum = sum(n),          # Summing number of obs
+                  rnsum = sum(n) - 2,     # Subtracting 2
+                  ssum = sum(sprod),      # Summing the n-variance products
+                  nprod = prod(n),        # Multiplying the number of obs
+                  mdiff = m[1]-m[2]) %>%  # Difference in means
+        mutate(weights = (nprod/nsum)/sum(nprod/nsum),  # Computing weights    
+               sigma2 = (nsum/nprod)*(ssum/rnsum)) %>%  # Computing sigma2
+        select(mdiff, weights, sigma2) %>%
+        summarize(numerator = sum(weights*mdiff),
+                  denominator = sqrt(sum(weights^2*sigma2)),
+                  t_stat = numerator/denominator, # Test statistic
+                  stratified = FALSE) %>%         # Logical statement
+        select(t_stat, stratified)
+      return(t)
+      } # Closes simple t-test
     
-  } 
+  } #Closes first if statement 
   else {
     print("Data input needs to be a tibble or a data frame")
   } # Closes if statement
 } #Closes function
 
 t_test(strat)
+t_test(test)
+t_test(vilgot)
 
 
-
-###################### Lite rester ########################
-
-strat <- strat %>%
-  group_by(treatment, strata) %>%
-  summarize(n = length(strata),     # Computing n
-            s2 = var(x),            # Computing s-squared
-            m = mean(x)) %>%        # Computing x-bar
-  group_by(strata) %>%
-  mutate(sprod = s2*n) %>%          # Multiplying n by variance
-  summarize(nsum = sum(n),          # Summing number of obs
-            rnsum = sum(n) - 2,     # Subtracting 2
-            ssum = sum(sprod),      # Summing the n-variance products
-            nprod = prod(n),        # Multiplying the number of obs
-            mdiff = m[1]-m[2])      # Difference in means
-strat
-
-strat <- strat %>%
-  mutate(weights = (nprod/nsum)/sum(nprod/nsum),  # Computing weights    
-         sigma2 = (nsum/nprod)*(ssum/rnsum)) %>%  # Computing sigma2
-  select(mdiff, weights, sigma2)
-
-strat
-
-strat <- strat %>%
-  summarize(numerator = sum(weights*mdiff),
-            denominator = sqrt(sum(weights^2*sigma2)),
-            t_stat = numerator/denominator)
-strat
-d
+#####################################################
+############### Presidential Election ###############
+#####################################################
