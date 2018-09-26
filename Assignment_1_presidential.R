@@ -116,3 +116,33 @@ gamling <- ggplot(sammanslaget, aes(x = AGE775214,
   theme(strip.background = element_blank(), # Removing facet_wrap labels
         strip.text.x = element_blank())
 gamling
+
+sammanslaget %>%
+  select(gop_win, PST045214, ROBBERY, SBO315207, HSD310213, VET605213) %>%
+  mutate(mrb = ROBBERY/PST045214,         # Robberies per person
+         mvet = VET605213/PST045214) %>%  # Veterans per person
+  group_by(gop_win) %>%
+  summarize(nrob = sum(ROBBERY),          # Number of robberies
+            mrob = mean(mrb),             # Mean number of robs/person
+            blfrm = mean(SBO315207),      # Mean share of black firms
+            peeps = mean(HSD310213),      # Average number of peeps per hhld
+            vets = mean(mvet))            # Share of veterans
+
+library(ggrepel)
+sammanslaget %>%
+  group_by(state_abbreviation) %>%
+  select(SEX255214, SBO001207, RHI725214) %>%
+  summarize(wmn = mean(SEX255214), # Pct wmn
+            mfrms = mean(SBO001207), # Avg no. firms pr county
+            hisp = mean(RHI725214))%>% # Pct hispanics
+  ggplot(mapping = aes(x = hisp, y = wmn)) +
+  geom_point() +
+  geom_label_repel(aes(label = state_abbreviation),
+                   box.padding   = 0.35, 
+                   point.padding = 0.5,
+                   segment.color = 'blue') +
+  labs(title = "Women, hispanics and firms",
+       y = "% Women",
+       x = "% Hispanics") +
+  theme_classic()
+
