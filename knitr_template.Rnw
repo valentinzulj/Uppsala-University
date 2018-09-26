@@ -22,38 +22,52 @@ county_facts <- read_csv("county_facts.csv")
 results <- read_csv("general_result.csv")
 @
 
-After loading the data to R we wanted to merge the data into one data set. Each row is supposed to contain observations of a specific county, coded by the so called fips-code. We started off by joining the result file and the county facts file.
+After loading the data to R we wanted to merge the data into one data set. Each row is supposed to contain observations of a specific county, coded by the so called fips-code. First of all, we had to remove some rows in the county facts file since they where summaries for each state and the whole US. After that, we started off by joining the result file and the county facts file.
 <<include=FALSE>>=
+# Arranging the data by the smallest value of fips first.
 results <- results %>%
-  arrange(combined_fips) # Sorterar datat efter fips i storleksordning, minst först
+  arrange(combined_fips) 
 
-colnames(results)[2] <- "fips" # Byter namn så att alla ska va samma
+# Changing column name
+colnames(results)[2] <- "fips" 
 
-county_facts <- na.omit(county_facts, cols = "state_abbreviation") # Tar bort de rader som innehåller stat- eller landdata
-colnames(county_facts)[1] <- "fips" # Byter namn så att alla ska va samma
-county_facts$fips <- as.character(county_facts$fips) # För att kunna joina måste fips vara av samma class
+# Removing rows with state summaries
+county_facts <- na.omit(county_facts, cols = "state_abbreviation") 
+
+# Changing column name so they are the same in both files
+colnames(county_facts)[1] <- "fips" 
+
+# Column needs to be of same class to join together
+county_facts$fips <- as.character(county_facts$fips) 
 results$fips <- as.character(results$fips)
 
-results_county <- full_join(county_facts, results) # Lägger samman county_facts och results, matchar med fips
+# Joining county_facts och results
+results_county <- full_join(county_facts, results) 
 @
 In the crime file the fips-code was separated into two columns, one with the state-code and one with the county-code. This caused some problems. To get the correct fips-code, we had to add one or two zeros between the state- and county-code. For a county with county-code 1 and state-code 1, we wanted the fips-code to be 1001. We solved this with a for loop based on logical arguments. After uniting the two columns into one fips-code column, we could join the crime data file with the rest of the data. 
 
 <<include=FALSE>>=
 for (i in 1:nrow(crime_data)) {
-  if(crime_data[i, 6] < 10){ # Om county-koden är mindre än 10, multipliceras stat-koden med 100
+  # If the county-code is les than 10, the state-code is multiplied by 100
+  if(crime_data[i, 6] < 10){ 
     crime_data[i, 5] <- crime_data[i, 5]*100
   }else{
-    if(crime_data[i, 6] < 100 & crime_data[i, 6] > 9){ # Om county-koden är större än 10 men mindre än 100, multipliceras stat-koden med 10
+    # If the county-code is les than 10 but less than 100, the state-code is multiplied by 10
+    if(crime_data[i, 6] < 100 & crime_data[i, 6] > 9){ 
       crime_data[i, 5] <- crime_data[i, 5]*10
     }
   }
 }
 
-crime_data <- unite(crime_data, FIPS_ST, FIPS_CTY, col = "fips", sep = "") # Lägger ihop stat-koden och county-koden till en gemensam fipskod
-sammanslaget <- full_join(results_county, crime_data)  # Lägger samman results_county och crime_data, matchar med fips
+# Uniting the state- and county-code into one fips-code
+crime_data <- unite(crime_data, FIPS_ST, FIPS_CTY, col = "fips", sep = "") 
 
+# Joining results_county och crime_Data
+sammanslaget <- full_join(results_county, crime_data)
+
+# Moving columns of interest to the beginning of the file
 sammanslaget <- sammanslaget %>%
-  select(fips, per_gop_2016, total_votes_2016, everything()) # Flyttar fram kolumner av intresse
+  select(fips, per_gop_2016, total_votes_2016, everything()) 
 
 @
 
@@ -70,11 +84,14 @@ sammanslaget <- sammanslaget %>% # Lägger till en ny kolumn i datamaterialet
 We also created a new variable, /gop_win, which is 1 if the republicans got more votes than the democrats and 0 if smaller.
 
 <<>>=
-sammanslaget <- sammanslaget %>% # Lägger till en ny kolumn i datamaterialet
+# Adding a new column to the file, "gop_winW
+sammanslaget <- sammanslaget %>% 
   mutate(gop_win = per_gop_2016 - per_dem_2016) %>%
   select(gop_win, everything())
+
+# If gap_win is bigger than 0, gap_win is coded as 1. 0 if smaller than 0
 for (i in 1:nrow(sammanslaget)) {
-  if(sammanslaget[i, 1] > 0){ # Om gap_win är större än 0, kodas gap_win som 1, annars som 0. 1 = republikansk seger, 0 = demokratisk seger 
+  if(sammanslaget[i, 1] > 0){ 
     sammanslaget[i, 1] <- 1
   }else{
     sammanslaget[i, 1] <- 0
@@ -117,9 +134,9 @@ ggplot(data = sammanslaget) +
 
 @
 
+<<>>=
+as.table(summary(sammanslaget$INC910213))
+@
 
 
 \end{document}
-
-
-
