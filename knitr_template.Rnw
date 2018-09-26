@@ -14,7 +14,7 @@ library(scales)
 
 \section{Problem 3}
 In this task we were give three data files We were asked to join the three data files, clean it and then do some analysis of the data.
-\subsection{Data analysis}
+\subsection{Data preparation}
 <<include=FALSE>>=
 crime_data <- read_tsv("crime_data.tsv")
 dictionary_county_facts <- read_csv("county_facts_dictionary.csv")
@@ -22,59 +22,59 @@ county_facts <- read_csv("county_facts.csv")
 results <- read_csv("general_result.csv")
 @
 
-After loading the data to R we wanted to merge the data into one data set. Each row is supposed to contain observations of a specific county, codes with the so called fips-code. We started off by joining the result file and the county facts file.
+After loading the data to R we wanted to merge the data into one data set. Each row is supposed to contain observations of a specific county, coded by the so called fips-code. We started off by joining the result file and the county facts file.
 <<include=FALSE>>=
 results <- results %>%
-  arrange(combined_fips) # Sorterar datat efter fips i storleksordning, minst först
+  arrange(combined_fips) # Sorterar datat efter fips i storleksordning, minst fÃ¶rst
 
-colnames(results)[2] <- "fips" # Byter namn så att alla ska va samma
+colnames(results)[2] <- "fips" # Byter namn sÃ¥ att alla ska va samma
 
-county_facts <- na.omit(county_facts, cols = "state_abbreviation") # Tar bort de rader som innehåller stat- eller landdata
-colnames(county_facts)[1] <- "fips" # Byter namn så att alla ska va samma
-county_facts$fips <- as.character(county_facts$fips) # För att kunna joina måste fips vara av samma class
+county_facts <- na.omit(county_facts, cols = "state_abbreviation") # Tar bort de rader som innehÃ¥ller stat- eller landdata
+colnames(county_facts)[1] <- "fips" # Byter namn sÃ¥ att alla ska va samma
+county_facts$fips <- as.character(county_facts$fips) # FÃ¶r att kunna joina mÃ¥ste fips vara av samma class
 results$fips <- as.character(results$fips)
 
-results_county <- full_join(county_facts, results) # Lägger samman county_facts och results, matchar med fips
+results_county <- full_join(county_facts, results) # LÃ¤gger samman county_facts och results, matchar med fips
 @
-
 In the crime file the fips-code was separated into two columns, one with the state-code and one with the county-code. This caused some problems. To get the correct fips-code, we had to add one or two zeros between the state- and county-code. For a county with county-code 1 and state-code 1, we wanted the fips-code to be 1001. We solved this with a for loop based on logical arguments. After uniting the two columns into one fips-code column, we could join the crime data file with the rest of the data. 
 
 <<include=FALSE>>=
 for (i in 1:nrow(crime_data)) {
-  if(crime_data[i, 6] < 10){ # Om county-koden är mindre än 10, multipliceras stat-koden med 100
+  if(crime_data[i, 6] < 10){ # Om county-koden Ã¤r mindre Ã¤n 10, multipliceras stat-koden med 100
     crime_data[i, 5] <- crime_data[i, 5]*100
   }else{
-    if(crime_data[i, 6] < 100 & crime_data[i, 6] > 9){ # Om county-koden är större än 10 men mindre än 100, multipliceras stat-koden med 10
+    if(crime_data[i, 6] < 100 & crime_data[i, 6] > 9){ # Om county-koden Ã¤r stÃ¶rre Ã¤n 10 men mindre Ã¤n 100, multipliceras stat-koden med 10
       crime_data[i, 5] <- crime_data[i, 5]*10
     }
   }
 }
 
-crime_data <- unite(crime_data, FIPS_ST, FIPS_CTY, col = "fips", sep = "") # Lägger ihop stat-koden och county-koden till en gemensam fipskod
-sammanslaget <- full_join(results_county, crime_data)  # Lägger samman results_county och crime_data, matchar med fips
+crime_data <- unite(crime_data, FIPS_ST, FIPS_CTY, col = "fips", sep = "") # LÃ¤gger ihop stat-koden och county-koden till en gemensam fipskod
+sammanslaget <- full_join(results_county, crime_data)  # LÃ¤gger samman results_county och crime_data, matchar med fips
 
 sammanslaget <- sammanslaget %>%
   select(fips, per_gop_2016, total_votes_2016, everything()) # Flyttar fram kolumner av intresse
 
 @
 
-Since we were interested in the republican partys result, we removed the rows were we had missing values on the variable percents of the vote for the republican party in 2016 (per_gop_2016).
+Since we were interested in the republican partys result, we removed the rows were we had missing values on the variable percents of the vote for the republican party in 2016 (/per_gop_2016). After removing the rows, we ended up with a file with 3112 observations of 94 variables.
 <<>>=
 sammanslaget <- na.omit(sammanslaget, cols = "per_gop_2016") 
-# Tar bort rader med NA på variabeln andel av rösterna för republikanerna
+# Tar bort rader med NA pÃ¥ variabeln andel av rÃ¶sterna fÃ¶r republikanerna
 
-sammanslaget <- sammanslaget %>% # Lägger till en ny kolumn i datamaterialet
+sammanslaget <- sammanslaget %>% # LÃ¤gger till en ny kolumn i datamaterialet
   mutate(gop_win = per_gop_2016 - per_dem_2016) %>%
   select(gop_win, everything())
 @
 
-We also created a new variable, gop_win, which is 1 if the republicans got more votes than the democrats and 0 if smaller.
+We also created a new variable, /gop_win, which is 1 if the republicans got more votes than the democrats and 0 if smaller.
+
 <<>>=
-sammanslaget <- sammanslaget %>% # Lägger till en ny kolumn i datamaterialet
+sammanslaget <- sammanslaget %>% # LÃ¤gger till en ny kolumn i datamaterialet
   mutate(gop_win = per_gop_2016 - per_dem_2016) %>%
   select(gop_win, everything())
 for (i in 1:nrow(sammanslaget)) {
-  if(sammanslaget[i, 1] > 0){ # Om gap_win är större än 0, kodas gap_win som 1, annars som 0. 1 = republikansk seger, 0 = demokratisk seger 
+  if(sammanslaget[i, 1] > 0){ # Om gap_win Ã¤r stÃ¶rre Ã¤n 0, kodas gap_win som 1, annars som 0. 1 = republikansk seger, 0 = demokratisk seger 
     sammanslaget[i, 1] <- 1
   }else{
     sammanslaget[i, 1] <- 0
@@ -82,17 +82,44 @@ for (i in 1:nrow(sammanslaget)) {
 }
 @
 
-The plot is too big, has no caption and can not be referred to later. We can fix this by adding some settings to the chunk.
-<<my_plot, fig.width = 6, fig.asp = 0.62, fig.align = "center", fig.cap = "My scatterplot">>=
-ggplot(mtcars, aes(x = mpg, y = wt)) +
-  geom_point()
+\subsection{Data analysis}
+
+We were now asked to explore the data by visualizing it and compute some summary statistics. 
+<<scatter1, fig.width = 6, fig.asp = 0.62, fig.align = "center", fig.align = "center", fig.cap = "Scatterplot of republican election result and median income in that county">>=
+ggplot(data = sammanslaget, mapping = aes(x = INC110213, y = per_gop_2016,
+                                                      color = HSD310213)) +
+  geom_point(size = 2) +
+  geom_smooth(method = lm, se = TRUE, color = "blue", size = 1.5) +
+  scale_y_continuous(breaks = c(0, 0.20, 0.40, 0.60, 0.80), 
+                     labels = c("0%", "20%", "40%", "60%", "80%")) +
+  scale_x_continuous(breaks = c(25000, 50000, 75000, 100000, 125000), 
+                     labels = c("$25000", "$50000", "$75000", "$100000", "$125000")) +
+  labs(title = "2016 US presidential election, county-level",
+       subtitle = "Final result for the republican party explained by the median income",
+       x = "Median household income, 2009-2013",
+       y = "Final result for the Republican party")
+
 @
-We can now refer to it as Figure \ref{fig:my_plot}.
+Figure \ref{fig:scatter1} shows the final result for the republican party explained by the median income. The best fit line shows that there is a negative relation between household income and support for the republican party.
+
+<<histogram1, fig.width = 6, fig.asp = 0.62, fig.align = "center", fig.cap = "Histogram of bla bla bla">>=
+ggplot(data = sammanslaget) + 
+  geom_histogram(mapping = aes(x = per_gop_2016), fill = "red", alpha = 1) +
+  geom_histogram(mapping = aes(x = per_gop_2012), fill = "blue", alpha = 0.5) +
+  scale_x_continuous(breaks = c(0, 0.20, 0.40, 0.60, 0.80), 
+                     labels = c("0%", "20%", "40%", "60%", "80%")) +
+  annotate(geom="text", x=0.93, y=287, label="2016", color="red", size = 5) +
+  annotate(geom="text", x=0.93, y=267, label="2012", color="blue", alpha = 0.5, size = 5) +
+  labs(title = "2016 and 2012 US presidential election, county-level",
+       subtitle = "Histogram of the Republican partyÂ´s final result in 2016 and 2012",
+       x = "Votes in percent",
+       y = "Number of counties")
+
+@
+
+
+
 \end{document}
-
-
-
-	
 
 
 
