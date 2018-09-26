@@ -1,0 +1,275 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage[a4paper, total={6.1in, 8.1in}]{geometry}
+\def \lreg{\texttt{linear\_regression }}
+\def \lmod{\texttt{linear\_model}}
+
+\author{Valentin Zulj \&  Vilgot sterlund}
+\title{Solutions to Assignment 1}
+\date{September 30, 2018}
+
+
+\begin{document}
+\maketitle
+<<include = FALSE>>=
+linear_regression <- function(data, dep, indep, intercept = TRUE) {
+  y <- as.matrix(data[, dep])
+  x <- as.matrix(data[, indep])
+    if (intercept == TRUE) { x <- cbind(1, x)
+  }
+  beta <- c(solve(crossprod(x)) %*% crossprod(x, y))
+  fits <- x %*% beta
+  resids <- y - fits
+  sigma2 <- sum(resids^2)/(length(resids)-ncol(x))
+  se <- sqrt(diag(sigma2 * solve(crossprod(x))))
+  names(beta) <- colnames(x)
+  return_obj <- list(beta = beta, se = se,
+                   residuals = c(resids), fitted = c(fits),
+                   sigma = sqrt(sigma2), dep = dep, indep = indep,
+                   intercept = intercept, y = c(y))
+class(return_obj) <- "linear_regression"
+return(return_obj)
+}
+library(tidyverse)
+@
+
+\section{Linear Regression} \label{sec:reg}
+In this first task we were given a funtction, \texttt{linear\_regression}, computing OLS estimates of linear regression parameters, and asked to write a function which gives the confidence interval for any given parameter.
+
+We begin by simulating a random set of data to run through the functions:
+
+<<>>=
+A <- data.frame(Y = rexp(100, rate = 2),           # Depentent variable
+                X1 = rnorm(100),                   # Independent variable
+                X2 = rnorm(100, mean = 4, sd = 2)) # Independent variable
+
+@
+\noindent And then proceed to estimate regression parameters, assinging the results to a new object:
+
+<<>>=
+lin_mod <- linear_regression(data = A, dep = 1, # y is the first column of 'data'
+                             indep = c(2,3)) # Regressors are in columns 2 and 3
+@
+
+Now, the \lreg function returns estimates of regression parameters and their standard errors, which are extracted from the object \linmod as follows:
+
+<<>>=
+lin_mod$beta
+lin_mod$se
+@
+
+Having done that, we begin construction of our own function set to return a confidence interval.
+\subsection{Function}
+Our interval function takes three arguments, namely \linmod, \texttt{pos}, and \texttt{alfa}. \linmod consits of the regression output given by \lreg, \texttt{alfa} is simply the singificance level. The \texttt{pos} argument denotes the position of the parameter for which we want to estimate the interval, meaning that if the linear regression model contains an intercept \texttt{pos = 1} will yield an interval for the intercept, this is perhaps best illustrated by the code shown at the very end of the last section. In code, the interval looks like:
+<<>>=
+ci <- function(lin_mod, pos, alfa){
+    i <- pos                              # Determines which parameter to estimate
+    beta <- lin_mod$beta[i]               # Extracting coefficients
+    se <- lin_mod$se[i]                   # Extracting standard errors
+    lower <- beta - qnorm(1-(alfa/2))*se  # qnorm() gives standard normal quantiles
+    upper <- beta + qnorm(1-(alfa/2))*se
+    out <- list(lower = lower,
+                upper = upper,
+                c_level = 100*(1-alfa),
+                var = pos)               # Objects to use in output
+    class(out) <- "linear_regression_ci" # Creating a new class for output
+    return(out)}
+@
+\noindent As is stated, the intervals are calculated using the quantiles of the standard normal distribution, this, of course, being a result of the central limit theorem.
+
+In our function, we create a new class and assign it to the output variable. We do this in order to edit the message printed when \texttt{print()} is called on our function. The editing of the function output will be described in Section~\ref{sec:print}.
+
+\subsection{Printing Method} \label{sec:print}
+As mentioned above, we will now edit the printing method connected to our \texttt{ci} function, seeing as we want it to print a message stating what parameter has been used, as well as the confidence level and, of course, the limits of the interval itself. To do this we make use of the fact that \texttt{print()} is a generic function, and that it can easily be edited in order to modify the output given when calling on it. In short, we edit the \texttt{print()} call of the new class given to the output object of our function, all according to the following code:
+
+<<>>=
+print.linear_regression_ci <- function(obj){
+    print(paste0("A ", obj$c_interval,   # The confidence level of the interval
+    "% confidence interval for beta_",
+    obj$var,                             # Shows which parameter we use
+    " is given by: (",
+    round(obj$lower, digits = 3),        # Rounds lower limit to 3 decimals
+    ",",
+    round(obj$upper, digits = 3),        # Rounds upper limit to 3 decimals
+    ")."
+    ))}
+@
+\noindent Now, running the \texttt{print()} function on an object created using our \texttt{ci()} function will result in the following output:
+
+<<>>==
+int <- ci(lin_mod, pos = 1, alfa = 0.05)
+int
+@
+
+\noindent Note that in this case, $\hat{\beta}_{1}$ should be interpreted as the the intercept of the regression model.
+\section{A Two-sample t-test for Stratified Data}
+In this task, we were asked to write a function that computes t-tests, and can do so for data that is either stratified or not stratified. We begin by demonstrating the way in which we wrote the code used for stratified data, then move on the ordinary t-test, and finally we combine them into a \texttt{t\_test()} function.
+
+\subsection{Stratified Data} \label{sec:strat}
+We begin by sampling a set of stratified data to be used in our calculations:
+<<>>=
+set.seed(2018)
+strat <- tibble(x = c(rnorm(200, 25), rnorm(200, 45), rnorm(200, 75)),
+                treatment = rep(1:2, 300),
+                strata = c(rep(1, 200), rep(2, 200), rep(3, 200)))
+
+@
+
+\noindent Having done that, we need to subset the data, so that we can calculate the test using the formulae given in the assignment. First, we group our data treatment and then by stratum, and calculate the values of $\bar{x}$, $n$, and $s^{2}$ for every stratum:
+
+<<>>=
+d <- strat                    %>%
+  group_by(treatment, strata) %>%
+  summarize(n = length(strata),   # Computing n
+           s2 = var (x),          # Computing sample variances
+           m = mean(x))           # Computing sample means
+d
+@
+
+\noindent In moving on, we group the remaining data set by strata, and calculate the sums and products given in the formulae:
+
+<<>>=
+d <- d                          %>%
+  group_by(strata)              %>%
+  mutate(sprod = s2*n)          %>%
+  summarize(nsum = sum(n),          # Summing number of obs
+            rnsum = sum(n) - 2,     # Subtracting 2
+            ssum = sum(sprod),      # Summing the n-variance products
+            nprod = prod(n),        # Multiplying the number of obs
+            mdiff = m[1]-m[2])      # Computing the difference in means
+@
+
+<<>>=
+d
+@
+
+\noindent Now, what we need to do is calculate the weights and the estimate the variances for each stratum, we do this using the formulae given in the assignment, and the following code:
+<<>>=
+d <- d                                              %>%
+    mutate(weights = (nprod/nsum) / sum(nprod/nsum),      # Computing weights    
+            sigma2 = (nsum/nprod) * (ssum/rnsum))   %>%   # Computing sigma2
+    select(mdiff, weights, sigma2)
+d
+@
+\noindent As can be seen from the tibble printed above, we have managed to calculate the weights, estimators of the variances, and differences beteen means, which are the last components needed in order to calculate the t-statistic. We calculate the statistic like this:
+
+<<>>=
+d <- d                                        %>%
+  summarize(numerator = sum(weights * mdiff),
+                  denominator = sqrt(sum((weights^2) * sigma2)),
+                  t_stat = numerator/denominator,    # Test statistic
+                  stratified = TRUE)          %>%    # Logical statement
+        select(t_stat, stratified)
+d
+@
+
+\noindent And find the result given in a tibble showing the test statistic itself, and a logical statement indicating whether the statistic has been computed using the method for stratified data sets.
+
+In the following section, we will present a method of calculating an ordinary two-sample t-tes, which is a simpler for, of what we have shown above.
+\newpage
+
+\subsection{Classical t-test}
+Again, we begin by simulating a data set that we can use for our calculations:
+
+<<>>=
+set.seed(2018)
+test <- tibble(x = c(rnorm(200, 25), rnorm(200, 45), rnorm(200, 75)),
+               treatment = rep(1:2, 300))
+@
+
+\noindent Then we group our data by treatment only, since there are no strata, and carry on as we did in Section~\ref{sec:strat}. Hence, our code will not be broken up and commented as much as above. 
+<<>>=
+t <- test                           %>%
+    group_by(treatment)             %>%
+    summarize(n = length(treatment),
+                  s2 = var(x),
+                  m = mean(x))      %>%
+    mutate(sprod = s2*n)            %>%
+    summarize(nsum = sum(n),                # Summing number of obs
+                  rnsum = sum(n) - 2,       # Subtracting 2
+                  ssum = sum(sprod),        # Summing the n-variance products
+                  nprod = prod(n),          # Multiplying the number of obs
+                  mdiff = m[1]-m[2])        # Difference in means
+@
+This chunk of code will do the exact same thing as it did above, calculating $\bar{x}$, $n$, $s^{2}$ as well as the different sums and products needed to compute the test statistic. What is worth noting, however, is that in the following code, the weights will be given as one, seeing as we have no strata to use:
+
+<<>>=
+t <- t %>%
+mutate(weights = (nprod/nsum)/sum(nprod/nsum),     # Computing weights    
+               sigma2 = (nsum/nprod)*(ssum/rnsum)) # Computing sigma2
+t
+@
+\noindent And finally, we compute the t-statistic:
+
+<<>>=
+t <- t                                %>%
+  select(mdiff, weights, sigma2)      %>%
+  summarize(numerator = sum(weights*mdiff),
+                  denominator = sqrt(sum(weights^2*sigma2)),
+                  t_stat = numerator/denominator, # Test statistic
+                  stratified = FALSE) %>%         # Logical statement
+  select(t_stat, stratified)
+@
+
+\noindent Once again producing a tibble containing the test statistic and a logical statement showing that the stratified t-test has not been used.
+
+<<>>=
+t
+@
+
+Now, the only thing left to do is put everything together in a function. This will be done i Section~\ref{sec:tfunc}.
+
+\subsection{Test Function}\label{sec:tfunc}
+Finally, we turn to putting a \texttt{t\_test} function together. In order to save space and paper, we will denote the methods used to calculate the tests as \texttt{d} and \texttt{t}, just as we have done in previous sections. Instead we will focus on the composition of the function itself.
+
+We begin by specifying an \texttt{if} statement, that makes sure the function will only accept input data in the form of a tibble or a data. If the function is called on any other type of data, it will return a warning message:
+
+<<>>=
+t_test <- function(data){
+  if(is.tibble(data & is.data.frame(data))){ # If statement limiting data
+    
+  } else {
+    print("Data input needs to be a tibble or a data frame")
+  } # Closes first if statement
+}   # Closes function
+
+@
+
+Moreover, we want the function to look for a column called 'strata', and if there is no such column in the data, want it to perfor a classical t-test rather than a stratified one:
+
+<<>>=
+t_test <- function(data){
+  if(is.tibble(data) & is.data.frame(data)){ # If statement limiting data
+    if(any(colnames(data)=="strata")){       # Stratified test
+      dstr <- d
+      return(dstr)
+    } else {       # Classical test
+      tcls <- t
+      return(tcls)
+    }              # Closes test selection
+    
+  } else {
+    print("Data input needs to be a tibble or a data frame")
+  }                # Closes first if statement
+}                  # Closes function
+
+@
+
+Finally, we create a vector of data just to try whether the if statements work. We also test the function using the data set we have previously simulated, namely \texttt{strat} and \texttt{test}:
+
+<<>>=
+vilgot <- 1:500 # Sample vector
+t_test(strat)   # Stratified test
+t_test(test)    # Classical test
+t_test(vilgot)  # Test producing warning message
+
+@
+
+So we see, that the test function returns the values -- or messages -- we want it to.
+
+\section{Presidential Election}
+\end{document}
