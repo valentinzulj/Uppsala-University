@@ -10,42 +10,42 @@ county_facts <- read_csv("county_facts.csv")
 results <- read_csv("general_result.csv")
 
 results <- results %>%
-  arrange(combined_fips) # Sorterar datatt efter fips i storleksordning, minst först
+  arrange(combined_fips) # Sorterar datatt efter fips i storleksordning, minst fÃ¶rst
 
-colnames(results)[2] <- "fips" # Byter namn så att alla ska va samma
+colnames(results)[2] <- "fips" # Byter namn sÃ¥ att alla ska va samma
 
-county_facts <- na.omit(county_facts, cols = "state_abbreviation") # Tar bort de rader som innehåller stat- eller landdata
-colnames(county_facts)[1] <- "fips" # Byter namn så att alla ska va samma
-county_facts$fips <- as.character(county_facts$fips) # För att kunna joina måste fips vara av samma class
+county_facts <- na.omit(county_facts, cols = "state_abbreviation") # Tar bort de rader som innehÃ¥ller stat- eller landdata
+colnames(county_facts)[1] <- "fips" # Byter namn sÃ¥ att alla ska va samma
+county_facts$fips <- as.character(county_facts$fips) # FÃ¶r att kunna joina mÃ¥ste fips vara av samma class
 results$fips <- as.character(results$fips)
 
-results_county <- full_join(county_facts, results) # Lägger samman county_facts och results, matchar med fips
+results_county <- full_join(county_facts, results) # LÃ¤gger samman county_facts och results, matchar med fips
 
 for (i in 1:nrow(crime_data)) {
-  if(crime_data[i, 6] < 10){ # Om county-koden är mindre än 10, multipliceras stat-koden med 100
+  if(crime_data[i, 6] < 10){ # Om county-koden Ã¤r mindre Ã¤n 10, multipliceras stat-koden med 100
     crime_data[i, 5] <- crime_data[i, 5]*100
   }else{
-    if(crime_data[i, 6] < 100 & crime_data[i, 6] > 9){ # Om county-koden är större än 10 men mindre än 100, multipliceras stat-koden med 10
+    if(crime_data[i, 6] < 100 & crime_data[i, 6] > 9){ # Om county-koden Ã¤r stÃ¶rre Ã¤n 10 men mindre Ã¤n 100, multipliceras stat-koden med 10
       crime_data[i, 5] <- crime_data[i, 5]*10
     }
   }
 }
 
-crime_data <- unite(crime_data, FIPS_ST, FIPS_CTY, col = "fips", sep = "") # Lägger ihop stat-koden och county-koden till en gemensam fipskod
-sammanslaget <- full_join(results_county, crime_data)  # Lägger samman results_county och crime_data, matchar med fips
+crime_data <- unite(crime_data, FIPS_ST, FIPS_CTY, col = "fips", sep = "") # LÃ¤gger ihop stat-koden och county-koden till en gemensam fipskod
+sammanslaget <- full_join(results_county, crime_data)  # LÃ¤gger samman results_county och crime_data, matchar med fips
 
 sammanslaget <- sammanslaget %>%
   select(fips, per_gop_2016, total_votes_2016, everything()) # Flyttar fram kolumner av intresse
 
 
-sammanslaget <- na.omit(sammanslaget, cols = "per_gop_2016") # Tar bort rader med NA på variabeln andel av rösterna för republikanerna
+sammanslaget <- na.omit(sammanslaget, cols = "per_gop_2016") # Tar bort rader med NA pÃ¥ variabeln andel av rÃ¶sterna fÃ¶r republikanerna
 
-sammanslaget <- sammanslaget %>% # Lägger till en ny kolumn i datamaterialet, "andel av rösterna för republikanerna" - "andel av rösterna för demokraterna"
+sammanslaget <- sammanslaget %>% # LÃ¤gger till en ny kolumn i datamaterialet, "andel av rÃ¶sterna fÃ¶r republikanerna" - "andel av rÃ¶sterna fÃ¶r demokraterna"
   mutate(gop_win = per_gop_2016 - per_dem_2016) %>%
   select(gop_win, everything())
 
 for (i in 1:nrow(sammanslaget)) {
-  if(sammanslaget[i, 1] > 0){ # Om gap_win är större än 0, kodas gap_win som 1, annars som 0. 1 = republikansk seger, 0 = demokratisk seger 
+  if(sammanslaget[i, 1] > 0){ # Om gap_win Ã¤r stÃ¶rre Ã¤n 0, kodas gap_win som 1, annars som 0. 1 = republikansk seger, 0 = demokratisk seger 
     sammanslaget[i, 1] <- 1
   }else{
     sammanslaget[i, 1] <- 0
@@ -53,7 +53,7 @@ for (i in 1:nrow(sammanslaget)) {
 }
 
 
-sammanslaget$gop_win <- as.factor(sammanslaget$gop_win) # Ändrar gap_wins class till factor
+sammanslaget$gop_win <- as.factor(sammanslaget$gop_win) # Ã„ndrar gap_wins class till factor
 
 
 #  Exploratory data analysis
@@ -79,13 +79,13 @@ histogram1 <- ggplot(data = sammanslaget) +
   annotate(geom="text", x=0.93, y=287, label="2016", color="red", size = 5) +
   annotate(geom="text", x=0.93, y=267, label="2012", color="blue", alpha = 0.5, size = 5) +
   labs(title = "2016 and 2012 US presidential election, county-level",
-       subtitle = "Histogram of the Republican party´s final result in 2016 and 2012",
+       subtitle = "Histogram of the Republican partyÂ´s final result in 2016 and 2012",
        x = "Votes in percent",
        y = "Number of counties")
 
 histogram1
 
-boxplot1 <- ggplot(sammanslaget, aes(x = gop_win, y = EDU685213)) +
+boxplot1 <- ggplot(sammanslaget, aes(x = gop_win, y = EDU685213, fill = gop_win)) +
   geom_boxplot() +
   scale_y_continuous(breaks = c(0, 20, 40, 60, 80), 
                      labels = c("0%", "20%", "40%", "60%", "80%")) +
@@ -93,7 +93,10 @@ boxplot1 <- ggplot(sammanslaget, aes(x = gop_win, y = EDU685213)) +
   labs(title = "2016 US presidential election",
        subtitle = "Boxplot of the educational level",
        x = "Winning party",
-       y = "Bachelor's degree or higher, percent of persons age 25+, 2009-2013")
+       y = "Bachelor's degree or higher, percent of persons age 25+, 2009-2013",
+       fill = "Carried by") +
+  scale_fill_manual(labels = c("Dems", "GOP"),
+                    values = c("blue", "red"))
 
 boxplot1
 
@@ -103,7 +106,6 @@ gamling <- ggplot(sammanslaget, aes(x = AGE775214,
   geom_density() +
   facet_wrap(~gop_win, nrow = 2) +
   labs(title = "Elderly votes in the 2016 Presidiential Election",
-       subtitle = "Histogram of the Republican party´s final result in 2016 and 2012",
        x = " Persons aged 65 or over, %",
        y = "Density",
        fill = "Carried by") +
@@ -112,5 +114,5 @@ gamling <- ggplot(sammanslaget, aes(x = AGE775214,
                     values = c("red", "blue")) + # Using party colours for fill
   scale_color_manual(values = c("red", "blue")) + # Using party colour for borders
   theme(strip.background = element_blank(), # Removing facet_wrap labels
-    strip.text.x = element_blank())
+        strip.text.x = element_blank())
 gamling
