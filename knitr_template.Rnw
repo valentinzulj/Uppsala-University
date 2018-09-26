@@ -1,0 +1,98 @@
+\documentclass{article}
+\usepackage{graphicx}
+
+\title{Statistical Programming with R \\ Assignment 1 \\ (\texttt{knitr} Example Report)}
+\author{Ville och Valle}
+\date{\today}
+\begin{document}
+\maketitle
+<<include=FALSE>>=
+library(tidyverse)
+library(devtools)
+library(scales)
+@
+
+\section{Problem 3}
+In this task we were give three data files We were asked to join the three data files, clean it and then do some analysis of the data.
+\subsection{Data analysis}
+<<include=FALSE>>=
+crime_data <- read_tsv("crime_data.tsv")
+dictionary_county_facts <- read_csv("county_facts_dictionary.csv")
+county_facts <- read_csv("county_facts.csv")
+results <- read_csv("general_result.csv")
+@
+
+After loading the data to R we wanted to merge the data into one data set. Each row is supposed to contain observations of a specific county, codes with the so called fips-code. We started off by joining the result file and the county facts file.
+<<include=FALSE>>=
+results <- results %>%
+  arrange(combined_fips) # Sorterar datat efter fips i storleksordning, minst först
+
+colnames(results)[2] <- "fips" # Byter namn så att alla ska va samma
+
+county_facts <- na.omit(county_facts, cols = "state_abbreviation") # Tar bort de rader som innehåller stat- eller landdata
+colnames(county_facts)[1] <- "fips" # Byter namn så att alla ska va samma
+county_facts$fips <- as.character(county_facts$fips) # För att kunna joina måste fips vara av samma class
+results$fips <- as.character(results$fips)
+
+results_county <- full_join(county_facts, results) # Lägger samman county_facts och results, matchar med fips
+@
+
+In the crime file the fips-code was separated into two columns, one with the state-code and one with the county-code. This caused some problems. To get the correct fips-code, we had to add one or two zeros between the state- and county-code. For a county with county-code 1 and state-code 1, we wanted the fips-code to be 1001. We solved this with a for loop based on logical arguments. After uniting the two columns into one fips-code column, we could join the crime data file with the rest of the data. 
+
+<<include=FALSE>>=
+for (i in 1:nrow(crime_data)) {
+  if(crime_data[i, 6] < 10){ # Om county-koden är mindre än 10, multipliceras stat-koden med 100
+    crime_data[i, 5] <- crime_data[i, 5]*100
+  }else{
+    if(crime_data[i, 6] < 100 & crime_data[i, 6] > 9){ # Om county-koden är större än 10 men mindre än 100, multipliceras stat-koden med 10
+      crime_data[i, 5] <- crime_data[i, 5]*10
+    }
+  }
+}
+
+crime_data <- unite(crime_data, FIPS_ST, FIPS_CTY, col = "fips", sep = "") # Lägger ihop stat-koden och county-koden till en gemensam fipskod
+sammanslaget <- full_join(results_county, crime_data)  # Lägger samman results_county och crime_data, matchar med fips
+
+sammanslaget <- sammanslaget %>%
+  select(fips, per_gop_2016, total_votes_2016, everything()) # Flyttar fram kolumner av intresse
+
+@
+
+Since we were interested in the republican partys result, we removed the rows were we had missing values on the variable percents of the vote for the republican party in 2016 (per_gop_2016).
+<<>>=
+sammanslaget <- na.omit(sammanslaget, cols = "per_gop_2016") 
+# Tar bort rader med NA på variabeln andel av rösterna för republikanerna
+
+sammanslaget <- sammanslaget %>% # Lägger till en ny kolumn i datamaterialet
+  mutate(gop_win = per_gop_2016 - per_dem_2016) %>%
+  select(gop_win, everything())
+@
+
+We also created a new variable, gop_win, which is 1 if the republicans got more votes than the democrats and 0 if smaller.
+<<>>=
+sammanslaget <- sammanslaget %>% # Lägger till en ny kolumn i datamaterialet
+  mutate(gop_win = per_gop_2016 - per_dem_2016) %>%
+  select(gop_win, everything())
+for (i in 1:nrow(sammanslaget)) {
+  if(sammanslaget[i, 1] > 0){ # Om gap_win är större än 0, kodas gap_win som 1, annars som 0. 1 = republikansk seger, 0 = demokratisk seger 
+    sammanslaget[i, 1] <- 1
+  }else{
+    sammanslaget[i, 1] <- 0
+  }
+}
+@
+
+The plot is too big, has no caption and can not be referred to later. We can fix this by adding some settings to the chunk.
+<<my_plot, fig.width = 6, fig.asp = 0.62, fig.align = "center", fig.cap = "My scatterplot">>=
+ggplot(mtcars, aes(x = mpg, y = wt)) +
+  geom_point()
+@
+We can now refer to it as Figure \ref{fig:my_plot}.
+\end{document}
+
+
+
+	
+
+
+
