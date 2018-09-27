@@ -91,6 +91,11 @@ for (i in 1:nrow(sammanslaget)) {
 
 sammanslaget$gop_win <- as.factor(sammanslaget$gop_win) # ??ndrar gap_wins class till factor
 
+opts_chunk$set(size = "footnotesize",
+comment = NA,
+background = "#E7E7E7",
+prompt = FALSE)
+
 @
 
 \section{Linear Regression} \label{sec:reg}
