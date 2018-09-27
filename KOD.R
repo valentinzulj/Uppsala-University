@@ -217,7 +217,7 @@ ggplot(data = sammanslaget) +
         y = "Number of counties")
 
 # Boxplot of educational level in counties won by each party
-ggplot(sammanslaget, aes(x = gop_win, y = EDU685213)) +
+ggplot(sammanslaget, aes(x = gop_win, y = EDU685213, fill = gop_win)) +
   geom_boxplot() +
   scale_y_continuous(breaks = c(0, 20, 40, 60, 80), 
                      labels = c("0%", "20%", "40%", "60%", "80%")) +
@@ -225,21 +225,25 @@ ggplot(sammanslaget, aes(x = gop_win, y = EDU685213)) +
   labs(title = "2016 US presidential election",
        subtitle = "Boxplot of the educational level",
        x = "Winning party",
-       y = "Bachelor's degree or higher, percent of persons age 25+, 2009-2013")
+       y = "B.Sc. or higher, % of persons age 25+, 2009-13",
+       fill = "Carried by") +
+  scale_fill_manual(labels = c("Dems", "GOP"),
+                    values = c("blue", "red"))
 
 # Distribution the share of elderly people, split by winning party
-ggplot(sammanslaget, aes(x = AGE775214, fill = gop_win,color = gop_win)) + 
+ggplot(sammanslaget, aes(x = AGE775214, 
+                                    fill = gop_win,
+                                    color = gop_win)) + 
   geom_density() +
   facet_wrap(~gop_win, nrow = 2) +
   labs(title = "Elderly votes in the 2016 Presidiential Election",
-       subtitle = "Density plot",
        x = " Persons aged 65 or over, %",
        y = "Density",
        fill = "Carried by") +
   guides(color = FALSE) + # Removing legend for "color"
-  scale_fill_manual(labels = c("GOP", "Dems"), # Labelling "fill" legends
-                    values = c("red", "blue")) + # Using party colours for fill
-  scale_color_manual(values = c("red", "blue")) + # Using party colour for borders
+  scale_fill_manual(labels = c("Dems", "GOP"), # Labelling "fill" legends
+                    values = c("blue", "red")) + # Using party colours for fill
+  scale_color_manual(values = c("blue", "red")) + # Using party colour for borders
   theme(strip.background = element_blank(), # Removing facet_wrap labels
         strip.text.x = element_blank())
 
@@ -261,3 +265,36 @@ ggplot(data = sammanslaget, aes(x = EDU635213, y = per_gop_2016, size = HSD31021
 t(as.matrix(summary(sammanslaget$INC910213))) # Summary of the variable per capita income, dollars.
 t(as.matrix(summary(sammanslaget$MURDER)))    # Summary of the variable murder.
 t(as.matrix(summary(sammanslaget$PST045214))) # Summary of the variable population.
+
+tab1 <- sammanslaget %>%
+  select(gop_win, PST045214, ROBBERY, SBO315207, HSD310213, VET605213) %>%
+  mutate(mrb = ROBBERY/PST045214,         # Robberies per person
+         mvet = VET605213/PST045214,
+         GOP = gop_win) %>%  # Veterans per person
+  group_by(GOP) %>%
+  summarize("Robberies" = sum(ROBBERY),          # Number of robberies
+            "Avg. robberies" = mean(mrb),             # Mean number of robs/person
+            "Black Firms" = mean(SBO315207),  # Mean share of black firms
+            "Ppl per hshld" = mean(HSD310213),      # Average number of peeps per hhld
+            "Share Veterans" = mean(mvet)) %>%
+  select(GOP,"Robberies", "Avg. robberies","Black Firms",
+         "Ppl per hshld", "Share Veterans")
+
+xtable(tab1, digits = c(0,0,3,5,3,3,5), caption = "Variables grouped by 'carrying' party", label = "tab:fsum")
+
+sammanslaget %>%
+  group_by(state_abbreviation) %>%
+  select(SEX255214, SBO001207, RHI725214) %>%
+  summarize(wmn = mean(SEX255214),     # Pct wmn
+            mfrms = mean(SBO001207),   # Avg no. firms pr county
+            hisp = mean(RHI725214))%>% # Pct hispanics
+  ggplot(mapping = aes(y = mfrms, x = wmn)) +
+  geom_point() +
+  geom_label_repel(aes(label = state_abbreviation),
+                   box.padding   = 0.35, 
+                   point.padding = 0.5,
+                   segment.color = 'blue') +
+  labs(title = "Women, states and firms",
+       x = "% Women",
+       y = "Mean number of firms per state") +
+  theme_classic()
