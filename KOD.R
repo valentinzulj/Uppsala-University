@@ -85,7 +85,7 @@ t_test <- function(data){
                   s2 = var(x),            # Computing s-squared
                   m = mean(x)) %>%        # Computing x-bar
         group_by(strata) %>%
-        mutate(sprod = s2*n) %>%          # Multiplying n by variance
+        mutate(sprod = s2*(n-1)) %>%          # Multiplying n by variance
         summarize(nsum = sum(n),          # Summing number of obs
                   rnsum = sum(n) - 2,     # Subtracting 2
                   ssum = sum(sprod),      # Summing the n-variance products
@@ -99,14 +99,14 @@ t_test <- function(data){
                   t_stat = numerator/denominator,  # Test statistic
                   stratified = TRUE) %>%           # Logical statement
         select(t_stat, stratified)
-      return(d)
+      return(print.data.frame(d))
     } else {
       t <- data %>%
         group_by(treatment) %>%
         summarize(n = length(treatment),
                   s2 = var(x),
                   m = mean(x)) %>%
-        mutate(sprod = s2*n) %>%
+        mutate(sprod = s2*(n-1)) %>%
         summarize(nsum = sum(n),          # Summing number of obs
                   rnsum = sum(n) - 2,     # Subtracting 2
                   ssum = sum(sprod),      # Summing the n-variance products
@@ -120,8 +120,8 @@ t_test <- function(data){
                   t_stat = numerator/denominator, # Test statistic
                   stratified = FALSE) %>%         # Logical statement
         select(t_stat, stratified)
-      return(t)
-      } # Closes simple t-test
+      return(print.data.frame(t))
+    } # Closes simple t-test
     
   } #Closes first if statement 
   else {
