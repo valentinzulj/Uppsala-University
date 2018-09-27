@@ -191,21 +191,21 @@ ggplot(sammanslaget, aes(x = AGE775214,
 @
 
 
-<<include=FALSE>>=
-tab_sum_1 <- summary(sammanslaget$INC910213)
-tab_sum_2 <- summary(sammanslaget$MURDER)
-tab_sum_3 <- summary(sammanslaget$PST045214)
+
+<<table1, results = "asis", echo = FALSE>>=
+xtable(t(as.matrix(summary(sammanslaget$INC910213))), caption = "Summary of the variable per capita income, dollars.")
 @
+Table \ref{tab:table1} shows a summary of the variable per capita money income in past 12 months (2013 dollars), 2009-2013. 
 
-Table ??? shows a summary of the variable per capita money income in past 12 months (2013 dollars), 2009-2013. 
-
-Table ??? shows a summary of the variable counts of arrests and offenses for the crime murder. We can see that most of the counties were free from murders.
-
-Table ??? shows a summary of the variable population, 2014 estimate. We can see that more than half of the counties has a population of less than 26000. However, the mean is driven up by a few very big counties.
-
-<<results = "asis", echo = FALSE>>=
-xtable(tab_sum_1, caption = "My regression model")
+<<table2, results = "asis", echo = FALSE>>=
+xtable(t(as.matrix(summary(sammanslaget$MURDER))), caption = "Summary of the variable murder.")
 @
+Table \ref{tab:table2} shows a summary of the variable counts of arrests and offenses for the crime murder. We can see that most of the counties were free from murders.
+
+<<table3, results = "asis", echo = FALSE>>=
+xtable(t(as.matrix(summary(sammanslaget$PST045214))), caption = "Summary of the variable population.")
+@
+Table \ref{tab:table3} shows a summary of the variable population, 2014 estimate. We can see that more than half of the counties has a population of less than 26000. However, the mean is driven up by a few very big counties.
 
 
 \end{document}
