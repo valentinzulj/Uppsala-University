@@ -1,5 +1,8 @@
 library(tidyverse)            
-
+library(xtable)
+library(tidyverse)
+library(ggrepel)
+library(scales)
 
 #####################################################
 ################# Linear Regression #################
@@ -73,7 +76,7 @@ set.seed(2018)
 test <- tibble(x = c(rnorm(200, 25), rnorm(200, 45), rnorm(200, 75)),
                treatment = rep(1:2, 300))
 
-vilgot <- 1:500
+vilgot <- 1:500 # For testing later
 
 
 t_test <- function(data){
@@ -152,13 +155,13 @@ results$fips <- as.character(results$fips)
 
 results_county <- full_join(county_facts, results) # Joining county_facts och results
 
-  
+
 for (i in 1:nrow(crime_data)) {
   if(crime_data[i, 6] < 10){            # If the county-code is les than 10, the state-code is multiplied by 100
-      crime_data[i, 5] <- crime_data[i, 5]*100
+    crime_data[i, 5] <- crime_data[i, 5]*100
   }else{
-  if(crime_data[i, 6] < 100 & crime_data[i, 6] > 9){ 
-        crime_data[i, 5] <- crime_data[i, 5]*10 # If the county-code is les than 10 but less than 100, the state-code is multiplied by 10
+    if(crime_data[i, 6] < 100 & crime_data[i, 6] > 9){ 
+      crime_data[i, 5] <- crime_data[i, 5]*10 # If the county-code is les than 10 but less than 100, the state-code is multiplied by 10
     }
   }
 }
@@ -212,9 +215,9 @@ ggplot(data = sammanslaget) +
   annotate(geom="text", x=0.93, y=287, label="2016", color="red", size = 5) +
   annotate(geom="text", x=0.93, y=267, label="2012", color="blue", alpha = 0.5, size = 5) +
   labs(title = "2016 and 2012 US presidential election, county-level",
-        subtitle = "Histogram of the Republican party´s final result in 2016 and 2012",
-        x = "Votes in percent",
-        y = "Number of counties")
+       subtitle = "Histogram of the Republican party´s final result in 2016 and 2012",
+       x = "Votes in percent",
+       y = "Number of counties")
 
 # Boxplot of educational level in counties won by each party
 ggplot(sammanslaget, aes(x = gop_win, y = EDU685213, fill = gop_win)) +
@@ -232,8 +235,8 @@ ggplot(sammanslaget, aes(x = gop_win, y = EDU685213, fill = gop_win)) +
 
 # Distribution the share of elderly people, split by winning party
 ggplot(sammanslaget, aes(x = AGE775214, 
-                                    fill = gop_win,
-                                    color = gop_win)) + 
+                         fill = gop_win,
+                         color = gop_win)) + 
   geom_density() +
   facet_wrap(~gop_win, nrow = 2) +
   labs(title = "Elderly votes in the 2016 Presidiential Election",
@@ -280,7 +283,7 @@ tab1 <- sammanslaget %>%
   select(GOP,"Robberies", "Avg. robberies","Black Firms",
          "Ppl per hshld", "Share Veterans")
 
-xtable(tab1, digits = c(0,0,3,5,3,3,5), caption = "Variables grouped by 'carrying' party", label = "tab:fsum")
+tab1
 
 sammanslaget %>%
   group_by(state_abbreviation) %>%
