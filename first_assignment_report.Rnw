@@ -8,7 +8,7 @@
 \def \lreg{\texttt{linear\_regression }}
 \def \lmod{\texttt{linear\_model}}
 
-\author{Valentin Zulj \&  Vilgot sterlund}
+\author{Valentin Zulj \&  Vilgot \"{O}sterlund}
 \title{Solutions to Assignment 1}
 \date{September 30, 2018}
 
