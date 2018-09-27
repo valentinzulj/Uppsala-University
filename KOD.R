@@ -137,3 +137,127 @@ t_test(vilgot)
 #####################################################
 ############### Presidential Election ###############
 #####################################################
+crime_data <- read_tsv("crime_data.tsv") # Reading the data
+dictionary_county_facts <- read_csv("county_facts_dictionary.csv")
+county_facts <- read_csv("county_facts.csv")
+results <- read_csv("general_result.csv")
+
+results <- results %>%
+  arrange(combined_fips)                   # Arranging the data by the smallest value of fips first.
+colnames(results)[2] <- "fips"             # Changing column name
+county_facts <- na.omit(county_facts, cols = "state_abbreviation") # Removing rows with state summaries
+colnames(county_facts)[1] <- "fips"        # Changing column name so they are the same in both files
+county_facts$fips <- as.character(county_facts$fips) # Column needs to be of same class to join together
+results$fips <- as.character(results$fips)
+
+results_county <- full_join(county_facts, results) # Joining county_facts och results
+
+  
+for (i in 1:nrow(crime_data)) {
+  if(crime_data[i, 6] < 10){            # If the county-code is les than 10, the state-code is multiplied by 100
+      crime_data[i, 5] <- crime_data[i, 5]*100
+  }else{
+  if(crime_data[i, 6] < 100 & crime_data[i, 6] > 9){ 
+        crime_data[i, 5] <- crime_data[i, 5]*10 # If the county-code is les than 10 but less than 100, the state-code is multiplied by 10
+    }
+  }
+}
+
+crime_data <- unite(crime_data, FIPS_ST, FIPS_CTY, col = "fips", sep = "") # Uniting the state- and county-code into one fips-code
+
+sammanslaget <- full_join(results_county, crime_data) # Joining results_county och crime_Data
+
+sammanslaget <- sammanslaget %>%
+  select(fips, per_gop_2016, total_votes_2016, everything()) # Moving columns of interest to the beginning of the file
+
+sammanslaget <- na.omit(sammanslaget, cols = "per_gop_2016") # Removing rows with missing values on republican result
+
+sammanslaget <- sammanslaget %>% 
+  mutate(gop_win = per_gop_2016 - per_dem_2016) %>% # Adding a new column to the file, gop_winW
+  select(gop_win, everything())
+
+
+for (i in 1:nrow(sammanslaget)) {
+  if(sammanslaget[i, 1] > 0){ # If gap_win is bigger than 0, gap_win is coded as 1 
+    sammanslaget[i, 1] <- 1 
+  }else{
+    sammanslaget[i, 1] <- 0 # If gap_win is smaller than 0, gap_win is coded as 0
+  }
+}
+
+sammanslaget$gop_win <- as.factor(sammanslaget$gop_win) # Setting gop win to a factor variable
+
+# Scatterplot of repblican election result, median income and persons per household
+ggplot(data = sammanslaget, mapping = aes(x = INC110213, y = per_gop_2016, color = HSD310213)) +
+  geom_point(size = 2) +
+  geom_smooth(method = lm, se = TRUE, color = "blue", size = 1.5) +
+  scale_y_continuous(breaks = c(0, 0.20, 0.40, 0.60, 0.80), 
+                     labels = c("0%", "20%", "40%", "60%", "80%")) +
+  scale_x_continuous(breaks = c(25000, 50000, 75000, 100000, 125000), 
+                     labels = c("$25000", "$50000", "$75000", "$100000", "$125000")) +
+  labs(title = "2016 US presidential election, county-level",
+       subtitle = "Final result for the republican party explained by the median income",
+       x = "Median household income, 2009-2013",
+       y = "Final result for the Republican party",
+       color = "Persons / households")
+
+# Histogram of the Republican party´s final result in 2016 and 2012
+ggplot(data = sammanslaget) + 
+  geom_histogram(mapping = aes(x = per_gop_2016), 
+                 fill = "red", alpha = 1) +
+  geom_histogram(mapping = aes(x = per_gop_2012), 
+                 fill = "blue", alpha = 0.5) +
+  scale_x_continuous(breaks = c(0, 0.20, 0.40, 0.60, 0.80), 
+                     labels = c("0%", "20%", "40%", "60%", "80%")) +
+  annotate(geom="text", x=0.93, y=287, label="2016", color="red", size = 5) +
+  annotate(geom="text", x=0.93, y=267, label="2012", color="blue", alpha = 0.5, size = 5) +
+  labs(title = "2016 and 2012 US presidential election, county-level",
+        subtitle = "Histogram of the Republican party´s final result in 2016 and 2012",
+        x = "Votes in percent",
+        y = "Number of counties")
+
+# Boxplot of educational level in counties won by each party
+ggplot(sammanslaget, aes(x = gop_win, y = EDU685213)) +
+  geom_boxplot() +
+  scale_y_continuous(breaks = c(0, 20, 40, 60, 80), 
+                     labels = c("0%", "20%", "40%", "60%", "80%")) +
+  scale_x_discrete(breaks = c(0, 1), labels = c("Democrats", "Republicans")) +
+  labs(title = "2016 US presidential election",
+       subtitle = "Boxplot of the educational level",
+       x = "Winning party",
+       y = "Bachelor's degree or higher, percent of persons age 25+, 2009-2013")
+
+# Distribution the share of elderly people, split by winning party
+ggplot(sammanslaget, aes(x = AGE775214, fill = gop_win,color = gop_win)) + 
+  geom_density() +
+  facet_wrap(~gop_win, nrow = 2) +
+  labs(title = "Elderly votes in the 2016 Presidiential Election",
+       subtitle = "Density plot",
+       x = " Persons aged 65 or over, %",
+       y = "Density",
+       fill = "Carried by") +
+  guides(color = FALSE) + # Removing legend for "color"
+  scale_fill_manual(labels = c("GOP", "Dems"), # Labelling "fill" legends
+                    values = c("red", "blue")) + # Using party colours for fill
+  scale_color_manual(values = c("red", "blue")) + # Using party colour for borders
+  theme(strip.background = element_blank(), # Removing facet_wrap labels
+        strip.text.x = element_blank())
+
+# Scatterplot of republican result, educational level, income and persons per household
+ggplot(data = sammanslaget, aes(x = EDU635213, y = per_gop_2016, size = HSD310213, color = INC110213)) +
+  geom_point() +
+  geom_smooth(method = lm, se = TRUE, color = "blue", size = 1.5) +
+  scale_y_continuous(breaks = c(0, 0.20, 0.40, 0.60, 0.80), 
+                     labels = c("0%", "20%", "40%", "60%", "80%")) +
+  scale_x_continuous(breaks = c(60, 80, 100), 
+                     labels = c("60%", "80%", "100%")) +
+  scale_color_gradient(low = "purple", high = "green") +
+  labs(title = "2016 US presidential election",
+       x = "Share of population with high school graduation",
+       y = "Republican result",
+       color = "Median income",
+       size = "Persons / household")
+
+t(as.matrix(summary(sammanslaget$INC910213))) # Summary of the variable per capita income, dollars.
+t(as.matrix(summary(sammanslaget$MURDER)))    # Summary of the variable murder.
+t(as.matrix(summary(sammanslaget$PST045214))) # Summary of the variable population.
