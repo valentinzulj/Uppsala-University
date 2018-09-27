@@ -27,32 +27,32 @@ linear_regression <- function(data, dep, indep, intercept = TRUE) {
   return(return_obj)
 }
 
-A <- data.frame(Y = rexp(100, rate =2), # Depentent variable
-                X1 = rnorm(100),     # Independent variable
+A <- data.frame(Y = rexp(100, rate =2),           # Depentent variable
+                X1 = rnorm(100),                  # Independent variable
                 X2 = rnorm(100, mean = 4, sd = 2) # Dependent variable
 )
 
-lin_mod <- linear_regression(data = A, dep = 1, # y variable is first columnt in 'data'
-                             indep = c(2,3)                # regressors are in columns two and three
+lin_mod <- linear_regression(data = A, dep = 1,   # y variable is first columnt in 'data'
+                             indep = c(2,3)       # Regressors are in columns two and three
 )
 
 ci <- function(lin_mod, pos, alfa){
-  i <- pos # Default means that pos = 1 gives interval for the intercept 
+  i <- pos                             # Default means that pos = 1 gives interval for the intercept 
   lower <- lin_mod$beta[i] - qnorm(1-(alfa/2))*lin_mod$se[i] 
   upper <- lin_mod$beta[i] + qnorm(1-(alfa/2))*lin_mod$se[i]
   out <- list(lower = lower,
               upper = upper,
               c_level = 100*(1-alfa),
-              var = pos) # Things to use in return
+              var = pos)               # Things to use in return
   class(out) <- "linear_regression_ci" # Creating a new class for the output
   
   return(out)
 } 
 
 print.linear_regression_ci <- function(obj){ # Adjusting the printing method of the new output class
-  print(paste0("A ", obj$c_level, # Gives the confidence level of the interval 
+  print(paste0("A ", obj$c_level,            # Gives the confidence level of the interval 
                "% confidence interval for beta_", 
-               obj$var, # The index denoting which beta is used
+               obj$var,                      # The index denoting which beta is used
                " is given by: (", 
                round(obj$lower, digits = 3), # Rounding lower limit to three decimals
                ", ", 
@@ -88,7 +88,7 @@ t_test <- function(data){
                   s2 = var(x),            # Computing s-squared
                   m = mean(x)) %>%        # Computing x-bar
         group_by(strata) %>%
-        mutate(sprod = s2*(n-1)) %>%          # Multiplying n by variance
+        mutate(sprod = s2*(n-1)) %>%      # Multiplying n by variance
         summarize(nsum = sum(n),          # Summing number of obs
                   rnsum = sum(n) - 2,     # Subtracting 2
                   ssum = sum(sprod),      # Summing the n-variance products
@@ -140,7 +140,7 @@ t_test(vilgot)
 #####################################################
 ############### Presidential Election ###############
 #####################################################
-crime_data <- read_tsv("crime_data.tsv") # Reading the data
+crime_data <- read_tsv("crime_data.tsv")   # Reading the data
 dictionary_county_facts <- read_csv("county_facts_dictionary.csv")
 county_facts <- read_csv("county_facts.csv")
 results <- read_csv("general_result.csv")
@@ -243,11 +243,11 @@ ggplot(sammanslaget, aes(x = AGE775214,
        x = " Persons aged 65 or over, %",
        y = "Density",
        fill = "Carried by") +
-  guides(color = FALSE) + # Removing legend for "color"
-  scale_fill_manual(labels = c("Dems", "GOP"), # Labelling "fill" legends
-                    values = c("blue", "red")) + # Using party colours for fill
+  guides(color = FALSE) +                         # Removing legend for "color"
+  scale_fill_manual(labels = c("Dems", "GOP"),    # Labelling "fill" legends
+                    values = c("blue", "red")) +  # Using party colours for fill
   scale_color_manual(values = c("blue", "red")) + # Using party colour for borders
-  theme(strip.background = element_blank(), # Removing facet_wrap labels
+  theme(strip.background = element_blank(),       # Removing facet_wrap labels
         strip.text.x = element_blank())
 
 # Scatterplot of republican result, educational level, income and persons per household
@@ -271,14 +271,14 @@ t(as.matrix(summary(sammanslaget$PST045214))) # Summary of the variable populati
 
 tab1 <- sammanslaget %>%
   select(gop_win, PST045214, ROBBERY, SBO315207, HSD310213, VET605213) %>%
-  mutate(mrb = ROBBERY/PST045214,         # Robberies per person
+  mutate(mrb = ROBBERY/PST045214,                 # Robberies per person
          mvet = VET605213/PST045214,
-         GOP = gop_win) %>%  # Veterans per person
+         GOP = gop_win) %>%                       # Veterans per person
   group_by(GOP) %>%
-  summarize("Robberies" = sum(ROBBERY),          # Number of robberies
-            "Avg. robberies" = mean(mrb),             # Mean number of robs/person
-            "Black Firms" = mean(SBO315207),  # Mean share of black firms
-            "Ppl per hshld" = mean(HSD310213),      # Average number of peeps per hhld
+  summarize("Robberies" = sum(ROBBERY),           # Number of robberies
+            "Avg. robberies" = mean(mrb),         # Mean number of robs/person
+            "Black Firms" = mean(SBO315207),      # Mean share of black firms
+            "Ppl per hshld" = mean(HSD310213),    # Average number of peeps per hhld
             "Share Veterans" = mean(mvet)) %>%
   select(GOP,"Robberies", "Avg. robberies","Black Firms",
          "Ppl per hshld", "Share Veterans")
