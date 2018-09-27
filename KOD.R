@@ -140,6 +140,8 @@ t_test(vilgot)
 #####################################################
 ############### Presidential Election ###############
 #####################################################
+
+
 crime_data <- read_tsv("crime_data.tsv")   # Reading the data
 dictionary_county_facts <- read_csv("county_facts_dictionary.csv")
 county_facts <- read_csv("county_facts.csv")
