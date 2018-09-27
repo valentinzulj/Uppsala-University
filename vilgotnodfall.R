@@ -27,13 +27,13 @@ for (i in 1:length(unique(strat$strata))) {
     }
     taljare[j] <- (antal[j, 1] * antal[j, 2])/(antal[j, 1] + antal[j, 2])
     poolad_varians[j] <- ((antal[j, 1] + antal[j, 2])/(antal[j, 1] * antal[j, 2])) * 
-      ((antal[j, 1] * var_mat[j, 1]) + (antal[j, 2] * var_mat[j, 2])) /
+      (((antal[j, 1]-1) * var_mat[j, 1]) + ((antal[j, 2]-1) * var_mat[j, 2])) /
       (antal[j, 1] + antal[j, 2] - 2)
   }
   weights[i] <- taljare[i]/sum(taljare)
 }
 
-# Räkna ut t-värde
+# RÃ¤kna ut t-vÃ¤rde
 difference <- numeric(length(unique(strat$strata)))
 varians <- numeric(length(unique(strat$strata)))
 
