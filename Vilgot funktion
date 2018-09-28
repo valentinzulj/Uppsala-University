@@ -1,0 +1,68 @@
+funktion <- function(x){
+  strat <- x
+  if(any(colnames(strat) == "strata")){
+    weights <- numeric(length(unique(strat$strata)))
+    taljare <- numeric(length(unique(strat$strata)))
+    antal <- matrix(0, nrow = length(unique(strat$strata)), ncol = length(unique(strat$treatment)))
+    poolad_varians <- numeric(length(unique(strat$strata)))
+    var_mat <- matrix(0, nrow = length(unique(strat$strata)), ncol = length(unique(strat$treatment)))
+    mean_mat <- matrix(0, nrow = length(unique(strat$strata)), ncol = length(unique(strat$treatment)))
+    
+    ## Weights och poolad varians
+    for (i in 1:length(unique(strat$strata))) {
+      for (j in 1:length(unique(strat$strata))) {
+        for(k in 1:length(unique(strat$strata))){
+          for (l in 1:length(unique(strat$treatment))) {
+            antal[k, l] <- sum(strat$strata == k & strat$treatment == l)
+            x <- strat %>%
+              filter(strata == k & treatment == l)
+            var_mat[k, l] <- var(x$x)
+            mean_mat[k, l] <- mean(x$x)
+          }
+        }
+        taljare[j] <- (antal[j, 1] * antal[j, 2])/(antal[j, 1] + antal[j, 2])
+        poolad_varians[j] <- ((antal[j, 1] + antal[j, 2])/(antal[j, 1] * antal[j, 2])) * 
+          ((antal[j, 1] * var_mat[j, 1]) + (antal[j, 2] * var_mat[j, 2])) /
+          (antal[j, 1] + antal[j, 2] - 2)
+      }
+      weights[i] <- taljare[i]/sum(taljare)
+    }
+    
+    # Räkna ut t-värde
+    difference <- numeric(length(unique(strat$strata)))
+    varians <- numeric(length(unique(strat$strata)))
+    
+    for(i in 1:length(unique(strat$strata))){
+      difference[i] <- weights[i] * (mean_mat[i, 1] - mean_mat[i, 2])
+      varians[i] <- (weights[i]^2) * (poolad_varians[i])
+    }
+    t <- (sum(difference))/(sqrt(sum(varians)))
+    print(t)
+  }else{
+    antal <- numeric(length(unique(strat$treatment)))
+    var_list <- numeric(length(unique(strat$treatment)))
+    mean_list <- numeric(length(unique(strat$treatment)))
+    
+    for (i in 1:length(unique(strat$treatment))) {
+      antal[i] <- sum(strat$treatment == i)
+      x <- strat %>%
+        filter(treatment == i)
+      var_list[i] <- var(x$x)
+      mean_list[i] <- mean(x$x)
+    }
+  
+    poolad_varians <- ((antal[1] + antal[2])/(antal[1] * antal[2])) * 
+      ((antal[1] * var_list[1]) + (antal[2] * var_list[2])) /
+      (antal[1] + antal[2] - 2)
+    
+    # Räkna ut t-värde
+    difference <- mean_list[1] - mean_list[2]
+
+    t <- difference/(sqrt(poolad_varians))
+    print(t)
+  }
+}
+
+funktion(strat)
+no_strat <- select(strat, -strata)
+funktion(no_strat)
