@@ -159,11 +159,11 @@ results_county <- full_join(county_facts, results) # Joining county_facts och re
 
 
 for (i in 1:nrow(crime_data)) {
-  if(crime_data[i, 6] < 10){            # If the county-code is les than 10, the state-code is multiplied by 100
+  if(crime_data[i, 6] < 10){            # If the county-code < 10, the state-code is multiplied by 100
     crime_data[i, 5] <- crime_data[i, 5]*100
   }else{
     if(crime_data[i, 6] < 100 & crime_data[i, 6] > 9){ 
-      crime_data[i, 5] <- crime_data[i, 5]*10 # If the county-code is greater than 9 but less than 100, the state-code is multiplied by 10
+      crime_data[i, 5] <- crime_data[i, 5]*10 # If 9 < county code < 100, the state-code is multiplied by 10
     }
   }
 }
