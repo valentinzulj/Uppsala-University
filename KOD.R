@@ -163,7 +163,7 @@ for (i in 1:nrow(crime_data)) {
     crime_data[i, 5] <- crime_data[i, 5]*100
   }else{
     if(crime_data[i, 6] < 100 & crime_data[i, 6] > 9){ 
-      crime_data[i, 5] <- crime_data[i, 5]*10 # If the county-code is les than 10 but less than 100, the state-code is multiplied by 10
+      crime_data[i, 5] <- crime_data[i, 5]*10 # If the county-code is greater than 9 but less than 100, the state-code is multiplied by 10
     }
   }
 }
