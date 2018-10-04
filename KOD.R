@@ -1,98 +1,133 @@
 library(tidyverse)
+library(StatProg)
 library(stringr)
-require(gridExtra)
+library(forcats)
+library(modelr)
+library(devtools)
+library(MASS)
+library(broom)
 
-theme_forest <- theme_classic(base_family = "Optima") +       # Changes font
-  theme(panel.background = element_rect(fill = "gray96"),     # Panel colour
-        plot.background = element_rect(fill = "gray96"),      # Plot colour
-        plot.title = element_text(face = "bold",              
-                                  hjust = 0.5, size = 15),    # Centers title
-        plot.subtitle = element_text(colour = "gray35", 
-                                     hjust = 0.5, size = 10), # Centers subtitle
-        axis.text.x = element_text(face="bold"),              
-        axis.text.y = element_text(face="bold"),
-        panel.grid.minor = element_blank(),                   # Removes minor grid
-        panel.grid.major = element_line(colour = "gray87"),   # Major grid colour
-        axis.ticks.x = element_blank(),                       # Removes x ticks
-        axis.ticks.y = element_blank(),                       # Removes y ticks
-        axis.line.x.bottom = element_line(colour = "gray60"), # Colour of x axis
-        axis.line.y.left = element_line(colour = "gray60"),   # Colour of y axis
-        legend.background = element_rect(fill = "gray96",     # Background of legend
-                                         colour = NA)
-    )
+######### Modelling #########
+data("birpanel")
+birpanel
 
-data <- read.csv("train.csv")
+birpanel <- birpanel %>%
+  mutate(LBW = ifelse(dbirwt < 2500, TRUE, FALSE))
 
-d <- data %>% # Making one area variable
-  select(Wilderness_Area1:Wilderness_Area4)
+#### Q1 ####
+birpanel %>%
+  count(LBW)
+#### Answer: 11439 ####
 
-for(i in 1:nrow(d)){
-  for (j in 1:ncol(d)){
-    if(d[i,j] == 1){
-      d[i,j] <- j
-    }
+birpanel <- birpanel %>%
+  mutate(cigar = na_if(cigar, 99))
+
+birpanel %>%
+  summarise_at(c("dbirwt", "LBW", "gestat", "smoke", "dmage", "dmeduc",
+                 "married", "black", "novisit",
+                 "pretri2", "pretri3"), mean)
+
+
+birpanel <- birpanel %>% 
+  mutate(somecoll = 2*somecoll,
+         collgrad = 3*collgrad) %>%
+  mutate(educ = factor(hsgrad + somecoll + collgrad),
+         educ = fct_recode(educ,
+                           "No_HS" = "0",
+                           "HS_Grad" = "1",
+                           "Some_Coll" = "2",
+                           "Coll_Grad" = "3"))
+
+
+
+birpanel <- birpanel %>%
+  mutate(adeqcode2 = 2*adeqcode2,
+         adeqcode3 = 3*adeqcode3, 
+         kessner = factor(adeqcode2 + adeqcode3),
+         kessner = fct_recode(kessner,
+                              "1" = "0"))
+
+
+birpanel <- birpanel %>%
+  mutate(pretri2 = 2*pretri2,
+         pretri3 = 3*pretri3,
+         prenatal = factor(novisit + pretri2 + pretri3),
+         prenatal = fct_recode(prenatal,
+                               "No_Visit" = "1",
+                               "First_Tri" = "0",
+                               "Second_Tri" = "2",
+                               "Third_Tri" = "3")) 
+
+
+lm_birwt <- lm(dbirwt ~ smoke + male + dmage + agesq + educ + 
+       married + black + kessner + kessner + prenatal + 
+         factor(stateres) + factor(year) + factor(idx), data = birpanel)
+lm_birwt
+summary(lm_birwt)
+
+lm_birwt_reduced <- lm(dbirwt ~ smoke + male + dmage + agesq + educ + 
+                         married + black + kessner + kessner + prenatal, data = birpanel)
+
+
+####################
+#### Question 2 ####
+#### Ans: 514.8 ####
+####################
+
+
+############### Simulation #################
+
+sigma <- matrix(c(1, 0.75, 0.75, 1), # Variance covariance
+                nrow = 2)
+n <- 50
+mu <- c(0, 0)
+x <- mvrnorm(n, mu = mu, Sigma = sigma)
+e <- rnorm(50, 0, 1)
+b <- matrix(c(0, 0.5), nrow = 2)
+y1 <-  x%*%b + e
+
+
+R <- 10000
+t_val <- numeric(R)
+
+for(i in 1:R){
+  x <- mvrnorm(n, mu = mu, Sigma = sigma)
+  e <- rnorm(50, 0, 1)
+  y <- x %*% b + e
+  mod <- lm(y[, 1] ~ x[, 1] + x[, 2])
+  if(as.numeric(tidy(mod)[3,5]) < 0.05){               # If significant
+    t_val[i] <- as.numeric(tidy(mod)[2,4])             # Save p-value
+  } else {                                             # If not significant
+    mod_red <- lm(y[, 1] ~ x[, 1])                     # Run reduced
+    t_val[i] <- as.numeric(tidy(mod_red)[2,4])         # Save p-vale
   }
-} # Recoding areas
-d <- d %>%
-  
-  mutate(wild = factor(rowSums(.))) %>% # Summing Rows
-  select(wild)
+}
 
-
-e <- data %>% # Making one area variable
-  select(Soil_Type1:Soil_Type40)
-
-for(i in 1:nrow(e)){
-  for (j in 1:ncol(e)){
-    if(e[i,j] == 1){
-      e[i,j] <- j
-    }
-  }
-} # Recoding soil
-
-e <- e %>%
-  mutate(soil = factor(rowSums(.))) %>% # Summing rows
-  select(soil)
-
-
-data <- data.frame(data, d, e)
-data <- as.tibble(data)
-data
-data <- data %>%
-  mutate(h_fire = Horizontal_Distance_To_Fire_Points,
-         h_water = Horizontal_Distance_To_Hydrology,
-         h_road = Horizontal_Distance_To_Roadways,
-         v_water = Vertical_Distance_To_Hydrology,
-         Cover_Type = factor(Cover_Type)) %>%
-  select(-starts_with("Horizontal"), -starts_with("Vertical"),
-         -starts_with("Wilderness"), - starts_with("Soil_Type"))
-
-data
-
-data %>%
-  ggplot(mapping = aes(x = Elevation, fill = Cover_Type, alpha = 0.5)) +
-  geom_density() +
-  labs(title = "Density plots",
-       subtitle = "Different cover types") +
-  scale_alpha(guide = "none") +
-  labs(x = "Elevation",
+ggplot(mapping = aes(x = p_val, alpha = 0.5)) +
+  geom_density(fill = "blue", color = "blue") +
+  theme_classic(base_family = "Optima") +
+  labs(x = "Test statistic",
        y = "Density",
-       fill = "Cover Type") +
-  theme_forest
+       title = "Test Statistic Density Plot") +
+  theme(plot.title = element_text(face = "bold",              
+                                 hjust = 0.5, size = 15),    
+        plot.subtitle = element_text(colour = "gray35", 
+                                     hjust = 0.5, size = 10)
+        ) +
+  scale_alpha(guide = "none")
 
-data %>%
-  ggplot(mapping = aes(x = Cover_Type, y = h_road)) +
-  geom_point()
+t_abs <- abs(t_val)  
 
-bar_soil <- data %>%
-  ggplot(mapping = aes(x = soil)) +
-  geom_bar()
+for(i in 1:length(t_abs)){
+  if(t_abs[i] <= 1.96){
+    t_abs[i] = TRUE
+  } else {
+    t_abs[i] = FALSE
+  }
+}
 
-bar_wild <- data %>%
-  ggplot(mapping = aes(x = wild)) +
-  geom_bar()
+mean(t_abs)
 
-grid.arrange(bar_soil, bar_wild, ncol = 2)
 
 
 
