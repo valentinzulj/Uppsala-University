@@ -2,6 +2,25 @@ library(tidyverse)
 library(stringr)
 require(gridExtra)
 
+theme_forest <- theme_classic(base_family = "Optima") +       # Changes font
+  theme(panel.background = element_rect(fill = "gray96"),     # Panel colour
+        plot.background = element_rect(fill = "gray96"),      # Plot colour
+        plot.title = element_text(face = "bold",              
+                                  hjust = 0.5, size = 15),    # Centers title
+        plot.subtitle = element_text(colour = "gray35", 
+                                     hjust = 0.5, size = 10), # Centers subtitle
+        axis.text.x = element_text(face="bold"),              
+        axis.text.y = element_text(face="bold"),
+        panel.grid.minor = element_blank(),                   # Removes minor grid
+        panel.grid.major = element_line(colour = "gray87"),   # Major grid colour
+        axis.ticks.x = element_blank(),                       # Removes x ticks
+        axis.ticks.y = element_blank(),                       # Removes y ticks
+        axis.line.x.bottom = element_line(colour = "gray60"), # Colour of x axis
+        axis.line.y.left = element_line(colour = "gray60"),   # Colour of y axis
+        legend.background = element_rect(fill = "gray96",     # Background of legend
+                                         colour = NA)
+    )
+
 data <- read.csv("train.csv")
 
 d <- data %>% # Making one area variable
@@ -52,7 +71,14 @@ data
 
 data %>%
   ggplot(mapping = aes(x = Elevation, fill = Cover_Type, alpha = 0.5)) +
-  geom_density()
+  geom_density() +
+  labs(title = "Density plots",
+       subtitle = "Different cover types") +
+  scale_alpha(guide = "none") +
+  labs(x = "Elevation",
+       y = "Density",
+       fill = "Cover Type") +
+  theme_forest
 
 data %>%
   ggplot(mapping = aes(x = Cover_Type, y = h_road)) +
