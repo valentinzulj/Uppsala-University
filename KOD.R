@@ -1,5 +1,6 @@
 library(tidyverse)
 library(stringr)
+require(gridExtra)
 
 data <- read.csv("train.csv")
 
@@ -57,6 +58,16 @@ data %>%
   ggplot(mapping = aes(x = Cover_Type, y = h_road)) +
   geom_point()
 
-  
+bar_soil <- data %>%
+  ggplot(mapping = aes(x = soil)) +
+  geom_bar()
+
+bar_wild <- data %>%
+  ggplot(mapping = aes(x = wild)) +
+  geom_bar()
+
+grid.arrange(bar_soil, bar_wild, ncol = 2)
+
+
 
 
