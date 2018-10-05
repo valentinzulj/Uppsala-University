@@ -50,7 +50,7 @@ ci <- function(lin_mod, pos, alfa){
 } 
 
 print.linear_regression_ci <- function(obj){ # Adjusting the printing method of the new output class
-  print(paste0("A ", obj$c_level,            # Gives the confidence level of the interval 
+  cat(paste0("A ", obj$c_level,            # Gives the confidence level of the interval 
                "% confidence interval for beta_", 
                obj$var,                      # The index denoting which beta is used
                " is given by: (", 
