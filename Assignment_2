@@ -50,7 +50,8 @@ cv <- function(data, dep, indep, lambda){
       filter(group != i)
     X_pred <- data %>%
       filter(group == i)             # Data for prediction
-    Y <- as.vector(X_pred$lpsa)      # Values to predict
+    Y <- X_pred %>% 
+      pull(dep)                      # Values to predict
     betas <- ridge(X, dep = dep,     # Dependent var
                    indep = indep,    # Independent vars
                    lambda = lambda)
@@ -89,3 +90,4 @@ mse %>%
         panel.grid.major = element_line(color = "gray90")
         ) + 
   guides(color = FALSE)
+  
