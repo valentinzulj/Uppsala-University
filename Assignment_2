@@ -50,7 +50,7 @@ cv <- function(data, dep, indep, lambda){
       filter(group != i)
     X_pred <- data %>%
       filter(group == i)             # Data for prediction
-    Y <- as.vector(X_pred$lpsa)       # Values to predict
+    Y <- as.vector(X_pred$lpsa)      # Values to predict
     betas <- ridge(X, dep = dep,     # Dependent var
                    indep = indep,    # Independent vars
                    lambda = lambda)
