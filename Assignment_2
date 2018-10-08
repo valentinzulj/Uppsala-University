@@ -1,0 +1,41 @@
+library(tidyverse)
+load("prostate.RData")
+
+#### Ridge regression ####
+indep <- prostate %>%               # Extracting covariate names
+  select(-c(lpsa, group)) %>%
+  colnames()
+
+ridge <- function(data, dep, indep, lambda){  # Estimating betas
+  int <- matrix(rep(1, nrow(data)), ncol = 1) # Intercept ones
+  reg <- as.matrix(data %>%           # Indepentent vars
+                    select(indep)) 
+  X <- cbind(int, reg)                # Regressor matrix
+  y <- as.matrix(data %>%             # Dependent variable
+                   select(dep))
+  lambda <- lambda
+  Id <- diag(ncol(X))                 # Identity matrix
+  beta_ridge <- solve(crossprod(X,X) + lambda*Id) %*% t(X) %*% y
+  beta_ridge = as.vector(beta_ridge)  # Vectorizing output
+  return(beta_ridge)
+}
+
+beta_hat <- ridge(prostate,"lpsa",    # Saving betas
+                  indep , 10)
+beta_hat
+class(beta_hat)                       # Testing class
+
+pred <- function(data, indep, beta_hat){ # Estimating yhats
+  int <- matrix(rep(1, nrow(data)), ncol = 1) # Intercept ones
+  reg <- as.matrix(data %>%           # Indepentent vars
+                     select(indep)) 
+  X <- cbind(int, reg)                # Regressor matrix
+  B <- as.matrix(beta_hat)            # Betas as matrix
+  preds <- X %*% B                    # Predicted values
+  preds <- as.vector(preds)
+  return(preds)
+}
+
+pred_vals <- pred(prostate, indep, beta_hat)
+pred_vals <- tibble(Predicted = pred_vals)
+pred_vals
