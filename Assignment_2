@@ -39,3 +39,52 @@ pred <- function(data, indep, beta_hat){ # Estimating yhats
 pred_vals <- pred(prostate, indep, beta_hat)
 pred_vals <- tibble(Predicted = pred_vals)
 pred_vals
+
+cv <- function(data, dep, indep, lambda){
+  n <- length(unique(data$group))    # Number of groups
+  mse <- numeric(n)                  # Preallocation
+  for (i in 1:n){                    # One per group
+    X <- data %>%                    # Filtering groups
+      filter(group == i)
+    Y <- X %>%                       # Dependent var
+      select(lpsa)
+    Y <- as.vector(Y$lpsa)           # Vectorizing Y
+    betas <- ridge(X, dep = dep,     # Dependent var
+                   indep = indep,    # Independent vars
+                   lambda = lambda)
+    preds <- pred(X, indep, 
+                  betas)             # Using estimated betas
+    mse[i] <- mean((Y - preds)^2)    # Computing MSE
+    
+  }
+  mse <- as.vector(mean(mse))        # Mean of MSE:s
+  return(mse)
+}
+
+remove(lambda)
+
+cv(prostate, "lpsa", indep, 10)
+
+
+l <- seq(0, 50, length.out = 50)
+mse <- numeric(length(l))
+for(i in 1:length(l)){
+  mse[i] <- cv(prostate, "lpsa", indep, l[i])
+
+}
+mse
+
+mse %>%
+  enframe() %>%
+  ggplot() +
+  geom_line(aes(x = name, y = value, color = "red")) +
+  labs(x = expression(lambda),
+       y = "MSE",
+       title = expression(MSE~plotted~against~lambda)) +
+  theme_classic() +
+  theme(plot.title = element_text(face = "bold",              
+                                  hjust = 0.5, size = 15),
+        axis.title.x = element_text(size = 15),
+        panel.grid.major = element_line(color = "gray90")
+        ) + 
+  guides(color = FALSE)
