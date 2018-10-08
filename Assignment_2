@@ -1,10 +1,12 @@
 library(tidyverse)
+library(glmnet)
 load("prostate.RData")
 
 #### Ridge regression ####
 indep <- prostate %>%               # Extracting covariate names
   select(-c(lpsa, group)) %>%
   colnames()
+dep <- "lpsa"
 
 ridge <- function(data, dep, indep, lambda){  # Estimating betas
   int <- matrix(rep(1, nrow(data)), ncol = 1) # Intercept ones
@@ -20,12 +22,12 @@ ridge <- function(data, dep, indep, lambda){  # Estimating betas
   return(beta_ridge)
 }
 
-beta_hat <- ridge(prostate,"lpsa",    # Saving betas
+beta_hat <- ridge(prostate, dep,    # Saving betas
                   indep , 10)
 beta_hat
 class(beta_hat)                       # Testing class
 
-pred <- function(data, indep, beta_hat){ # Estimating yhats
+pred <- function(data, indep, beta_hat){      # Estimating yhats
   int <- matrix(rep(1, nrow(data)), ncol = 1) # Intercept ones
   reg <- as.matrix(data %>%           # Indepentent vars
                      select(indep)) 
@@ -45,14 +47,14 @@ cv <- function(data, dep, indep, lambda){
   mse <- numeric(n)                  # Preallocation
   for (i in 1:n){                    # One per group
     X <- data %>%                    # Filtering groups
-      filter(group == i)
-    Y <- X %>%                       # Dependent var
-      select(lpsa)
-    Y <- as.vector(Y$lpsa)           # Vectorizing Y
+      filter(group != i)
+    X_pred <- data %>%
+      filter(group == i)             # Data for prediction
+    Y <- as.vector(X_pred$lpsa)       # Values to predict
     betas <- ridge(X, dep = dep,     # Dependent var
                    indep = indep,    # Independent vars
                    lambda = lambda)
-    preds <- pred(X, indep, 
+    preds <- pred(X_pred, indep, 
                   betas)             # Using estimated betas
     mse[i] <- mean((Y - preds)^2)    # Computing MSE
     
@@ -61,9 +63,8 @@ cv <- function(data, dep, indep, lambda){
   return(mse)
 }
 
-remove(lambda)
 
-cv(prostate, "lpsa", indep, 10)
+cv(prostate, dep, indep, 10)
 
 
 l <- seq(0, 50, length.out = 50)
