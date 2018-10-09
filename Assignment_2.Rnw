@@ -1,0 +1,43 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage[a4paper, total={6.1in, 8.1in}]{geometry}
+\usepackage[bm]
+
+\def \bfb {\mathbf{\hat{\beta}}} 
+
+\author{Valentin Zulj \&  Vilgot \"{O}sterlund}
+\title{Solutions to Assignment 2}
+\date{Deadline day, 2018}
+
+\begin{document}
+<<include = FALSE>>=
+library(tidyverse)
+
+@
+\maketitle
+
+\section{Ridge Regression}
+In this first section of our report, we will write a function -- \texttt{ridge} -- meant to calculate parameters of a ridge regression model. Furthermore, we will produce functions -- \texttt{pred} and \texttt{cv} -- that predict values using \texttt{ridge} and perform cross-validation respectively. In order to fulfill our task, we will use a set of data regarding the occurence of a prostate-specific antigen and certain clinical measures in men.
+
+Before we start doing any of the above, we import the data set from our working directory to the global environment of our \texttt{R} session. Also, knowing that our dependent variable is called \texttt{lpsa}, we assign it to an object. Furthermore, we create a vector containing the names of the covariates, setting the \texttt{group} variable aside for the moment.
+<<>>=
+load("prostate.Rdata")
+prostate <- as.tibble(prostate)
+
+dep <- "lpsa"
+indep <- prostate         %>%
+  select(-c(lpsa, group)) %>%
+  colnames()
+
+@
+
+\noindent Now, we can start putting our functions together. In Section \ref{ridge}, we produce \texttt{ridge}, which will compute the ridge coefficients $\bfb_{ridge}$.
+
+\subsection{Ridge} \label{ridge}
+In writing the \texttt{ridge} function, we will start off by computing the components needed in order to estimate the values in $\hat{\beta}_{ridge}$, and then proceed assembling the function itself.
+
+\end{document}
