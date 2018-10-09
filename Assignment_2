@@ -3,6 +3,7 @@ library(glmnet)
 library(broom)
 library(modelr)
 library(parallel)
+library(microbenchmark)
 
 load("prostate.RData")
 prostate <- as.tibble(prostate)
@@ -138,56 +139,57 @@ parallel
 
 
 #### Feature Bagging ####
-covariates <- train %>%
-  select(-c(SalePrice, train)) %>%
-  colnames()                            # Covariates to sample from
-dep <- train %>%                   
-  select(SalePrice) %>%
-  colnames                              # Dependent variable
-sqp <- round(sqrt(length(covariates)))  # Covariate sample size
-sample <- sample_n(train, 1465, 
-                   replace = TRUE)      # Sample
-sample_covariates <- sample(covariates, sqp, replace = FALSE)           # Sample covariates
-formula <- paste(dep, '~', paste(sample_covariates, collapse = ' + ' )) # Regression formula
-mod <- lm(formula, data = sample)       # Regression model
-
-options(warn = -1)                                   # Kills warining message
-rmse <- test %>%
-  add_predictions(mod)         %>%                   # Predictions
-  mutate(rmse = sqrt(mean(SalePrice - pred)^2)) %>%  # RMSE
-  summarize(rmse = mean(rmse)) %>%                   # Mean of RMSE
-  pull(rmse)                                         # Extracting RMSE
-options(warn = 1)
- 
-
-B <- 10            # Number of reps
-rmse <- numeric(B) # Preallocation
-covariates <- train %>%
-  select(-c(SalePrice, train)) %>%
-  colnames()                            # Covariates to sample from
-dep <- train %>%                   
-  select(SalePrice) %>%
-  colnames                              # Dependent variable
-sqp <- round(sqrt(length(covariates)))  # Covariate sample size
-
-
-for(i in 1:B){
-  sample <- sample_n(train, 1465, 
-                     replace = TRUE)      # Sample
-  sample_covariates <- sample(covariates, sqp, replace = FALSE)           # Sample covariates
-  formula <- paste(dep, '~', paste(sample_covariates, collapse = ' + ' )) # Regression formula
-  mod <- lm(formula, data = sample)       # Regression model
-  
-  options(warn = -1)                                   # Kills warining message
-  rmse[i] <- test %>%
-    add_predictions(mod)         %>%                   # Predictions
-    mutate(rmse = sqrt(mean(SalePrice - pred)^2)) %>%  # RMSE
-    summarize(rmse = mean(rmse)) %>%                   # Mean of RMSE
-    pull(rmse)                                         # Extracting RMSE
-  options(warn = 1)
-}
- 
 feature_bag <- function(B, train, test){
+  B <- B
+  train <- train
+  test <- test
+  workers <- makeCluster(4)                     # Setting up workers
+  clusterEvalQ(workers, {
+    library(tidyverse)
+    library(modelr)
+  })
+  f_bag <- function(B, train, test){
+    rmse <- numeric(B) # Preallocation
+    covariates <- train %>%
+      select(-c(SalePrice, train)) %>%
+      colnames()                            # Covariates to sample from
+    dep <- train %>%                   
+      select(SalePrice) %>%
+      colnames                              # Dependent variable
+    sqp <- round(sqrt(length(covariates)))  # Covariate sample size
+    
+    
+    for(i in 1:B){
+      sample <- sample_n(train, 1465, 
+                         replace = TRUE)      # Sample
+      sample_covariates <- sample(covariates, sqp, replace = FALSE)           # Sample covariates
+      formula <- paste(dep, '~', paste(sample_covariates, collapse = ' + ' )) # Regression formula
+      mod <- lm(formula, data = sample)       # Regression model
+      
+      options(warn = -1)                                   # Kills warining message
+      rmse[i] <- test %>%
+        add_predictions(mod)         %>%                   # Predictions
+        mutate(rmse = sqrt(mean(SalePrice - pred)^2)) %>%  # RMSE
+        summarize(rmse = mean(rmse)) %>%                   # Mean of RMSE
+        pull(rmse)                                         # Extracting RMSE
+      options(warn = 1)
+    }
+    obj <- mean(rmse)
+    return(obj)
+  }        # Inlcuding function
+  parallel <- parSapply(workers, rep((B/4), 4),
+                        FUN = f_bag, train = train,
+                        test = test)            # Parallel computing
+  out <- mean(parallel)                         # Mean of parallel computations
+  return(out)
+}
+
+
+
+
+feature_bag(100, train, test)
+
+f_bag <- function(B, train, test){
   rmse <- numeric(B) # Preallocation
   covariates <- train %>%
     select(-c(SalePrice, train)) %>%
@@ -216,3 +218,9 @@ feature_bag <- function(B, train, test){
   obj <- mean(rmse)
   return(obj)
 }
+
+f_bag(100, train, test)
+
+
+microbenchmark(utv = feature_bag(100, train, test),
+               enkel = f_bag(100, train, test))
