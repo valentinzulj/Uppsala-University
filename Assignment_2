@@ -28,7 +28,7 @@ ridge <- function(data, dep, indep, lambda){  # Estimating betas
                    select(dep))
   lambda <- lambda
   Id <- diag(ncol(X))                 # Identity matrix
-  beta_ridge <- solve(crossprod(X,X) + lambda*Id) %*% t(X) %*% y
+  beta_ridge <- solve(t(X)%*%X + lambda*Id) %*% t(X) %*% y
   beta_ridge = as.vector(beta_ridge)  # Vectorizing output
   return(beta_ridge)
 }
@@ -137,4 +137,82 @@ parallel <- mean(parallel)                         # Final value
 parallel
 
 
+#### Feature Bagging ####
+covariates <- train %>%
+  select(-c(SalePrice, train)) %>%
+  colnames()                            # Covariates to sample from
+dep <- train %>%                   
+  select(SalePrice) %>%
+  colnames                              # Dependent variable
+sqp <- round(sqrt(length(covariates)))  # Covariate sample size
+sample <- sample_n(train, 1465, 
+                   replace = TRUE)      # Sample
+sample_covariates <- sample(covariates, sqp, replace = FALSE)           # Sample covariates
+formula <- paste(dep, '~', paste(sample_covariates, collapse = ' + ' )) # Regression formula
+mod <- lm(formula, data = sample)       # Regression model
+
+options(warn = -1)                                   # Kills warining message
+rmse <- test %>%
+  add_predictions(mod)         %>%                   # Predictions
+  mutate(rmse = sqrt(mean(SalePrice - pred)^2)) %>%  # RMSE
+  summarize(rmse = mean(rmse)) %>%                   # Mean of RMSE
+  pull(rmse)                                         # Extracting RMSE
+options(warn = 1)
+ 
+
+B <- 10            # Number of reps
+rmse <- numeric(B) # Preallocation
+covariates <- train %>%
+  select(-c(SalePrice, train)) %>%
+  colnames()                            # Covariates to sample from
+dep <- train %>%                   
+  select(SalePrice) %>%
+  colnames                              # Dependent variable
+sqp <- round(sqrt(length(covariates)))  # Covariate sample size
+
+
+for(i in 1:B){
+  sample <- sample_n(train, 1465, 
+                     replace = TRUE)      # Sample
+  sample_covariates <- sample(covariates, sqp, replace = FALSE)           # Sample covariates
+  formula <- paste(dep, '~', paste(sample_covariates, collapse = ' + ' )) # Regression formula
+  mod <- lm(formula, data = sample)       # Regression model
   
+  options(warn = -1)                                   # Kills warining message
+  rmse[i] <- test %>%
+    add_predictions(mod)         %>%                   # Predictions
+    mutate(rmse = sqrt(mean(SalePrice - pred)^2)) %>%  # RMSE
+    summarize(rmse = mean(rmse)) %>%                   # Mean of RMSE
+    pull(rmse)                                         # Extracting RMSE
+  options(warn = 1)
+}
+ 
+feature_bag <- function(B, train, test){
+  rmse <- numeric(B) # Preallocation
+  covariates <- train %>%
+    select(-c(SalePrice, train)) %>%
+    colnames()                            # Covariates to sample from
+  dep <- train %>%                   
+    select(SalePrice) %>%
+    colnames                              # Dependent variable
+  sqp <- round(sqrt(length(covariates)))  # Covariate sample size
+  
+  
+  for(i in 1:B){
+    sample <- sample_n(train, 1465, 
+                       replace = TRUE)      # Sample
+    sample_covariates <- sample(covariates, sqp, replace = FALSE)           # Sample covariates
+    formula <- paste(dep, '~', paste(sample_covariates, collapse = ' + ' )) # Regression formula
+    mod <- lm(formula, data = sample)       # Regression model
+    
+    options(warn = -1)                                   # Kills warining message
+    rmse[i] <- test %>%
+      add_predictions(mod)         %>%                   # Predictions
+      mutate(rmse = sqrt(mean(SalePrice - pred)^2)) %>%  # RMSE
+      summarize(rmse = mean(rmse)) %>%                   # Mean of RMSE
+      pull(rmse)                                         # Extracting RMSE
+    options(warn = 1)
+  }
+  obj <- mean(rmse)
+  return(obj)
+}
