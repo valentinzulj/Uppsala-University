@@ -1,6 +1,17 @@
 library(tidyverse)
 library(glmnet)
+library(broom)
+library(modelr)
+library(parallel)
+
 load("prostate.RData")
+prostate <- as.tibble(prostate)
+
+house <- as.tibble(read.csv("house_prices.csv"))
+train <- as.tibble(house %>%
+          filter(train == TRUE))
+test <- as.tibble(house  %>%
+          filter(train == FALSE))
 
 #### Ridge regression ####
 indep <- prostate %>%               # Extracting covariate names
@@ -25,7 +36,7 @@ ridge <- function(data, dep, indep, lambda){  # Estimating betas
 beta_hat <- ridge(prostate, dep,    # Saving betas
                   indep , 10)
 beta_hat
-class(beta_hat)                       # Testing class
+class(beta_hat)                     # Testing class
 
 pred <- function(data, indep, beta_hat){      # Estimating yhats
   int <- matrix(rep(1, nrow(data)), ncol = 1) # Intercept ones
@@ -79,9 +90,7 @@ mse
 mse %>%
   enframe() %>%
   ggplot() +
-  geom_line(aes(x = name, y = value, color = "red"), 
-            size = 2) +
-  scale_x_discrete(limits = c(seq(0, 50, by = 10))) +
+  geom_line(aes(x = name, y = value, color = "red")) +
   labs(x = expression(lambda),
        y = "MSE",
        title = expression(MSE~plotted~against~lambda)) +
@@ -89,8 +98,43 @@ mse %>%
   theme(plot.title = element_text(face = "bold",              
                                   hjust = 0.5, size = 15),
         axis.title.x = element_text(size = 15),
-        panel.grid.major = element_line(color = "gray90"),
-        axis.ticks = element_blank()) + 
+        panel.grid.major = element_line(color = "gray90")
+        ) + 
   guides(color = FALSE)
+  
+
+
+#### Bagging ####
+bag <- function(B, train, test){
+  rmse <- numeric(B)  # Preallocation
+  
+  for(i in 1:B){
+    sample <- sample_n(train, 1465, replace = TRUE) # Sample from sample
+    mod <- lm(SalePrice ~ ., data = sample)         # Full model
+    mod_sel <- step(mod, trace = FALSE)             # Model selection
+    mod_step <- lm(formula(mod_sel), data = sample) # Reduced model
+    
+    options(warn = -1)                                  # Kills warining message
+    rmse[i] <- test %>%
+      add_predictions(mod_step)    %>%                  # Predictions
+      mutate(rmse = sqrt(mean(SalePrice - pred)^2)) %>% # RMSE
+      summarize(rmse = mean(rmse)) %>%                  # Mean of RMSE
+      pull(rmse)                                        # Extracting RMSE
+    options(warn = 1)
+  }
+  out <- mean(rmse) # Mean RMSE of B reps
+  return(out)
+}
+
+cl <- makeCluster(4)
+clusterEvalQ(cl, {
+             library(tidyverse)
+             library(modelr)
+             })
+clusterExport(cl, varlist = c("train", "test"))
+
+parallel <- parSapply(cl, rep(250,4), FUN = bag, train = train, test = test)
+parallel <- mean(parallel)
+
 
   
