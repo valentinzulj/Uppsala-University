@@ -102,8 +102,6 @@ mse %>%
         ) + 
   guides(color = FALSE)
   
-
-
 #### Bagging ####
 bag <- function(B, train, test){
   rmse <- numeric(B)  # Preallocation
@@ -133,8 +131,10 @@ clusterEvalQ(cl, {
              })
 clusterExport(cl, varlist = c("train", "test"))
 
-parallel <- parSapply(cl, rep(250,4), FUN = bag, train = train, test = test)
-parallel <- mean(parallel)
+parallel <- parSapply(cl, rep(250,4), FUN = bag, 
+                      train = train, test = test)  # Parallel computing
+parallel <- mean(parallel)                         # Final value
+parallel
 
 
   
