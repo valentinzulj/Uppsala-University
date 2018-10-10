@@ -29,6 +29,7 @@ opts_chunk$set(size = "footnotesize",
 In this first section of our report, we will write a function -- \texttt{ridge} -- meant to calculate parameters of a ridge regression model. Furthermore, we will produce functions -- \texttt{pred} and \texttt{cv} -- that predict values using \texttt{ridge} and perform cross-validation respectively. In order to fulfill our task, we will use a set of data regarding the occurence of a prostate-specific antigen and certain clinical measures in men.
 
 Before we start doing any of the above, we import the data set from our working directory to the global environment of our \texttt{R} session. Also, knowing that our dependent variable is called \texttt{lpsa}, we assign it to an object. Furthermore, we create a vector containing the names of the covariates, setting the \texttt{group} variable aside for the moment.
+
 <<>>=
 load("prostate.Rdata")
 prostate <- as.tibble(prostate)
@@ -40,16 +41,16 @@ indep <- prostate         %>%
 
 @
 
-\noindent Now, we can start putting our functions together. In Section \ref{ridge}, we produce \texttt{ridge}, which will compute the ridge coefficients $\bm{\hat{\beta}}_{ridge}$.
+\noindent Now, we can start putting our functions together. In Section \ref{sec:ridge}, we produce \texttt{ridge}, which will compute the ridge coefficients $\bm{\hat{\beta}}_{ridge}$.
 
-\subsection{Ridge} \label{ridge}
+\subsection{Ridge} \label{sec:ridge}
 In writing the \texttt{ridge} function, we will start off by computing the individual components needed in order to estimate the values in $\bm{\hat{\beta}}_{ridge}$, and then proceed assembling the function itself. The estimators can be solved for analytically, and the estimated parameter vector is given by
 
 \begin{align*}
-\bm{\hat{\beta}}_{ridge} = (\bm{X^{\top}X} + \lambda \bm{I_{p}})^{-1}\bm{X^{\top}y}
-\end{align*}.
+\bm{\hat{\beta}}_{ridge} = (\bm{X^{\top}X} + \lambda \bm{I_{p}})^{-1}\bm{X^{\top}y}.
+\end{align*}
 
-We begin by constructing the regressor matrix $\bm{X}$ which contains the values of our independent variables. However, in order to estimate a model with an intercept, we need to make sure the first column of the regressor matrix consists of only ones. We do this as follows:
+\noindent We begin by constructing the regressor matrix $\bm{X}$ which contains the values of our independent variables. However, in order to estimate a model with an intercept, we need to make sure the first column of the regressor matrix consists of only ones. We do this as follows:
 
 <<>>=
 int <- matrix(rep(1, nrow(prostate)), ncol = 1) # Intercept ones
@@ -98,12 +99,60 @@ ridge <- function(data, dep, indep, lambda){      # Estimating betas
 length(indep)
 @
 
-\noindent After that we assign run the \texttt{ridge} function and assign it to an arbitrary object name, and see that it contains one more observation than the covariate vector -- namely the intercept. Moreover, we make sure the function returns a vector, seeing as that would be of great use in the coming sections.
+\noindent After that we assign run the \texttt{ridge} function and assign it to an arbitrary object name, and see that it contains one more observation than the covariate vector, namely the intercept. Moreover, we make sure the function returns a vector, seeing as that would be of great use in the coming sections.
 
 <<>>=
 beta_hat <- ridge(prostate, dep, indep , 10)  # Saving betas
 length(beta_hat)
 class(beta_hat)
+beta_hat
+@
+\noindent We think the parameter estimates look rather reasonable, and in Section \ref{sec:preds} we will proceed through computing predictions using the estimates made.
+
+\newpage
+
+\subsection{Predictions} \label{sec:preds}
+As stated above, this section will be dedicated to making predictions or, to be more specific, to writing the \texttt{pred} function. In accordance with Section \ref{sec:ridge}, we will compute individual components before putting them together into the final product.
+
+The ridge regression model is rather simliar to one estimated using ordinary least squares. Fitted values are computed in the same way, using the ridge estimates instead of the OLS ones. The vector of fitted values is given by calculating
+
+\begin{align*}
+\bm{\hat{y}} = \bm{X} \bm{\hat{\beta}}_{ridge}.
+\end{align*}
+
+\noindent Hence, our \texttt{pred} function will only need to perform a simple matrix multiplication. As before, we begin by constructing the two matrices needed, and then procced to computing the actual estimates:
+
+<<>>=
+int <- matrix(rep(1, nrow(prostate)), ncol = 1) # Intercept ones
+reg <- as.matrix(prostate %>%                   # Indepentent vars
+                     select(indep)) 
+X <- cbind(int, reg)                            # Regressor matrix
+B <- as.matrix(beta_hat)                        # Beta vector
+preds <- X %*% B                                # Predicted values 
 @
 
-\end{document}
+\noindent What is left is generalizing the procedure and summarizing it into the \texttt{preds} function:
+
+<<>>=
+pred <- function(data, indep, beta_hat){          # Computing yhats
+  int <- matrix(rep(1, nrow(prostate)), ncol = 1) # Intercept ones
+  reg <- as.matrix(prostate %>%                   # Indepentent vars
+                     select(indep)) 
+  X <- cbind(int, reg)                            # Regressor matrix
+  B <- as.matrix(beta_hat)                        # Beta vector
+  preds <- X %*% B                                # Predicted values 
+  preds <- as.vector(preds)                       # Vectorising output
+  return(preds)}
+@
+
+\noindent In order to display the fitted values, we run the \texttt{pred} using the prostate data, and show the first 14 -- for the sake of symmetry -- values of output:
+
+<<>>>=
+pred_vals <- pred(prostate, indep, beta_hat)      # Fitted values
+pred_vals[1:14]
+@
+
+\noindent The predicted values alone are not guaranteed to be of any particular use, seeing as the model itself might not be very good. However, in Section \ref{sec:cv} we will write a function performing k-fold cross-validation and try to see how good the model actually is.
+
+\subsection{Cross Validaton} \label{sec:cv}
+
