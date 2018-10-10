@@ -5,9 +5,9 @@
 \usepackage{amssymb}
 \usepackage{amsfonts}
 \usepackage[a4paper, total={6.1in, 8.1in}]{geometry}
-\usepackage[bm]
+\usepackage{bm}
 
-\def \bfb {\mathbf{\hat{\beta}}} 
+
 
 \author{Valentin Zulj \&  Vilgot \"{O}sterlund}
 \title{Solutions to Assignment 2}
@@ -16,6 +16,11 @@
 \begin{document}
 <<include = FALSE>>=
 library(tidyverse)
+  
+opts_chunk$set(size = "footnotesize",
+  comment = NA,
+  background = "#E7E7E7",
+  prompt = FALSE)
 
 @
 \maketitle
@@ -35,9 +40,70 @@ indep <- prostate         %>%
 
 @
 
-\noindent Now, we can start putting our functions together. In Section \ref{ridge}, we produce \texttt{ridge}, which will compute the ridge coefficients $\bfb_{ridge}$.
+\noindent Now, we can start putting our functions together. In Section \ref{ridge}, we produce \texttt{ridge}, which will compute the ridge coefficients $\bm{\hat{\beta}}_{ridge}$.
 
 \subsection{Ridge} \label{ridge}
-In writing the \texttt{ridge} function, we will start off by computing the components needed in order to estimate the values in $\hat{\beta}_{ridge}$, and then proceed assembling the function itself.
+In writing the \texttt{ridge} function, we will start off by computing the individual components needed in order to estimate the values in $\bm{\hat{\beta}}_{ridge}$, and then proceed assembling the function itself. The estimators can be solved for analytically, and the estimated parameter vector is given by
+
+\begin{align*}
+\bm{\hat{\beta}}_{ridge} = (\bm{X^{\top}X} + \lambda \bm{I_{p}})^{-1}\bm{X^{\top}y}
+\end{align*}.
+
+We begin by constructing the regressor matrix $\bm{X}$ which contains the values of our independent variables. However, in order to estimate a model with an intercept, we need to make sure the first column of the regressor matrix consists of only ones. We do this as follows:
+
+<<>>=
+int <- matrix(rep(1, nrow(prostate)), ncol = 1) # Intercept ones
+reg <- as.matrix(prostate %>% 
+                   select(indep))               # Regressors
+X <- cbind(int, reg)                            # Regressor matrix
+@
+
+\noindent Adding to that, we use the same procedure to extract the dependent variable vector $\bm{y}$, and the identity matrix. $\lambda$ is a scalar of arbitrary value. In this specific case we set the value of $\lambda$ to be equal to 10.
+
+<<>>=
+y <- as.matrix(prostate %>%                      
+                  select(dep))    # Dependent variable 
+I <- diag(ncol(X))                # Identity matrix      
+lambda <- 10
+@
+
+\noindent Using the matrices constructed above, estimation of the $\bm{\beta}$ vector is rather straightforward:
+
+<<>>=
+beta_ridge <- solve(crossprod(X,X) + 
+                      lambda*I) %*% t(X) %*% y   # Estimated par vector
+@
+
+\noindent Finally, we can generalize the process an put everything together into the \texttt{ridge} function:
+
+<<>>=
+ridge <- function(data, dep, indep, lambda){      # Estimating betas
+  int <- matrix(rep(1, nrow(prostate)), ncol = 1) # Intercept ones
+  reg <- as.matrix(prostate %>% 
+                   select(indep))                 # Regressors
+  X <- cbind(int, reg) 
+  y <- as.matrix(prostate   %>%                      
+                  select(dep))                    # Dependent variable 
+  I <- diag(ncol(X))                              # Identity matrix      
+  lambda <- lambda
+  beta_ridge <- solve(crossprod(X,X) + 
+                      lambda*I) %*% t(X) %*% y    # Estimated par vector
+  beta_ridge = as.vector(beta_ridge)              # Vectorizing output
+  return(beta_ridge)}
+@
+
+\noindent The \texttt{ridge} function will return estimates of the $\beta$ parameters of our ridge regression model, with the first value in the vector giving the estimated intercept. To see whether the function actually works, we check the length of the vector containing the names of our independent variables
+
+<<>>=
+length(indep)
+@
+
+\noindent After that we assign run the \texttt{ridge} function and assign it to an arbitrary object name, and see that it contains one more observation than the covariate vector -- namely the intercept. Moreover, we make sure the function returns a vector, seeing as that would be of great use in the coming sections.
+
+<<>>=
+beta_hat <- ridge(prostate, dep, indep , 10)  # Saving betas
+length(beta_hat)
+class(beta_hat)
+@
 
 \end{document}
