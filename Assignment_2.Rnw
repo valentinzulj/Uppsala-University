@@ -17,6 +17,7 @@
 <<include = FALSE>>=
 library(tidyverse)
 library(parallel)
+library(modelr)
   
 opts_chunk$set(size = "footnotesize",
   comment = NA,
@@ -261,7 +262,7 @@ test <- as.tibble(house  %>%
 \subsubsection{LASSO}
 
 \subsection{Ensemble Methods}
-\subsubsection{Bagging}
+\subsubsection{Bagging} \label{sec:bag}
 Bagging is a method for bootstrap aggregation which is based on fitting specially selected models to different bootstrap samples in order to predict the same response variable a large number of times. Doing so allows us use the mean of these predictions as a final estimate of the response. This section will aim to write a function that performs bagging, and apply it to the data on house prices.
 
 Clearly, the repetitive block of the function will need to involve a loop, and so, we need to create a matrix for the output of the loop. If \texttt{B} is the arbitrary amount of times we want to run our loops, and the size of each bootstrap sample is 1465, the matrix will be generated as follows:
@@ -316,7 +317,7 @@ bag <- function(B, train, test){
    return(rmse)}
 @
 
-\noindent \texttt{bag} is rather slow, and evaluating it using any meaningful value of \texttt{B} would be incredibly inefficient. Because of this, we turn to parallel computing in order to save time in running the function. To do this, we use the following code:
+\noindent The computational burden of \texttt{bag} is rather heavy, and evaluating it using any meaningful value of \texttt{B} would be incredibly time consuming. Because of this, we turn to parallel computing in order to save time in running the function. To do this, we use the following code:
 
 <<eval = FALSE >>=
 cl <- makeCluster(4)                               # Setting up workers
@@ -331,6 +332,96 @@ parallel <- mean(parallel)                         # Final value
 parallel
 stopCluster(cl)                                    # Stopping workers
 @
+
+\noindent Evidently, the RMSE is extremely small relative to the ones garnered using the methods described above, showing the power of the bootstrap to statisticians.
+
+While the result of the ordinary bagging model were impressive, we will seek to try one more version of aggregate bootstrapping. In Section \ref{sec:fbag}, we will take a closer look at feature bagging.
+
+\subsubsection{Feature Bagging} \label{sec:fbag}
+Feature bagging is rather similary to the 'ordinary' bagging process discussed above. However, in feature bagging, we draw a random sample of from the list of regressors and use them as covariates when estimating our model. Assuming we have a covariate matrix of dimensions $n \times p$, $p$ will be the number of covariates -- excluding the intercept. In feature bagging, it is common practice to draw a sample of $\sqrt{p}$ covariates for each bootstrap sample used.
+
+Following from last section, we start by setting up varaibles to use in the loop. We use the same \texttt{B} as in Section \ref{sec:bag}:
+
+\newpage
+
+<<eval = FALSE>>=
+y_hat <- matrix(NA, nrow = 1465, ncol = B)  # Preallocation  
+  covariates <- train %>%
+    select(-c(SalePrice, train)) %>%
+    colnames()                              # Covariates to sample from
+  dep <- train %>%                   
+    select(SalePrice) %>%
+    colnames                                # Dependent variable
+  sqp <- round(sqrt(length(covariates)))    # Covariate sample size
+@
+
+\noindent The loop itself is also similar in structure, with the only difference being an adjustment made in order to sample regressors:
+
+<<eval = FALSE>>=
+for(i in 1:B){
+  sample <- sample_n(train, 1465, 
+                     replace = TRUE)      # Sample
+  sample_covariates <- sample(covariates, sqp, replace = FALSE)           # Sample covariates
+  formula <- paste(dep, '~', paste(sample_covariates, collapse = ' + ' )) # Regression formula
+  mod <- lm(formula, data = sample)       # Regression model
+    
+  options(warn = -1)                      # Kills warining message
+  y_hat[, i] <- test       %>%
+    add_predictions(mod)   %>%            # Predictions
+    pull(pred)                            # Extracting RMSE
+  options(warn = 1)}  
+@
+
+\noindent As is shown in the code, we round $\sqrt{p}$ and use it to determine how many covariates we sample. Then, we place them in a formula and use them in a linear regression model. Again, every column of the output matrix \texttt{y\_hat} will give a set of predictions from any given bootstrap sample. Moving on, we want to write a function that performs feature bagging, and also to calculate the RMSE of the predictions made using this method in particular. Hence, we design \texttt{feature\_bag} as follows:
+
+<<>>=
+feature_bag <- function(B, train, test){
+  y_hat <- matrix(NA, nrow = 1465, ncol = B) # Preallocation  
+  covariates <- train %>%
+    select(-c(SalePrice, train)) %>%
+    colnames()                              # Covariates to sample from
+  dep <- train %>%                   
+    select(SalePrice) %>%
+    colnames                                # Dependent variable
+  sqp <- round(sqrt(length(covariates)))    # Covariate sample size
+  
+  for(i in 1:B){
+    sample <- sample_n(train, 1465, 
+                       replace = TRUE)      # Sample
+    sample_covariates <- sample(covariates, sqp, replace = FALSE)           # Sample covariates
+    formula <- paste(dep, '~', paste(sample_covariates, collapse = ' + ' )) # Regression formula
+    mod <- lm(formula, data = sample)       # Regression model
+    
+    options(warn = -1)                      # Kills warining message
+    y_hat[, i] <- test       %>%
+      add_predictions(mod)   %>%            # Predictions
+      pull(pred)                            # Extracting RMSE
+    options(warn = 1)
+  }
+  y <- test %>%
+    pull(dep)                               # Response
+  hat <- rowMeans(y_hat)
+  rmse <- sqrt(mean(y - hat)^2)
+  return(rmse)}
+@
+
+\noindent Evaluating the \texttt{feature\_bag} using 5000 bootstrap samples yields the following RMSE:
+
+<<eval = FALSE>>=
+feature_bag(5000, train, test) 
+@
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
