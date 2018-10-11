@@ -105,7 +105,7 @@ print(models_rmse[1, 4] <-
   mean(sqrt(lasso)))                      # RMSE for LASSO
 @
 
-Last up, we have stacking, which can be seen as a multi stage rocket for prediction. In the first stage, we use the models achieved earlier (\texttt{lr\_all, lr\_step, ridge} and \texttt{LASSO}) to predict the sale prices in the training set. This yields four predictions for each observation. In the next stage, we regress the true values on the predicted values. This gives us a linear model, here called \texttt{stacking\_pred\_mod}. Now we use the same models to predict the sale prices in the test set, giving us four predictions for each observation. In the last stage, we use the predicted values to predict the sale prices with the linear model \texttt{stacking\_pred\_mod}.
+Last up, we have stacking, which can be seen as a multi stage rocket for prediction. In the first stage, we use the models achieved earlier (\texttt{lr\_all, lr\_step, ridge} and \texttt{LASSO}) to predict the sale prices in the training set. This yields four predictions for each observation. In the next stage, we regress the true values on the predicted values. This gives us a linear model, here called \texttt{stacking\_pred\_mod}. Now we use the same models to predict the sale prices in the test set, giving us four predictions for each observation. In the last stage, we use the predicted values to predict the sale prices with the linear model \texttt{stacking\_pred\_mod}. Surprisingly, this turned out to be the worst model for predicting the sale prices in the test set, with a RMSE of 18 792.
 
 <<warning = FALSE>>=
 lr_all_pred_train <- 
