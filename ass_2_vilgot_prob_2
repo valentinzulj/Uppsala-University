@@ -142,4 +142,13 @@ print(models_rmse[1, 7] <-
         mean(sqrt(stacking)))             # RMSE for stacking
 @
 
+
+<<>>=
+lower <- sqrt(1465/qchisq(0.975, df=1465))
+upper <- sqrt(1465/qchisq(0.025, df=1465))
+lower * 18792
+upper * 18792
+
+@
+
 \end{document}
