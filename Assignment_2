@@ -173,3 +173,30 @@ f_bag <- function(B, train, test){
 
 f_bag(500, train, test)
 
+n <- nrow(train)
+hat <- matrix(NA, nrow = n, ncol = 4)
+x <- model.matrix(SalePrice ~ ., train)           # Preparing the training set
+y <- train$SalePrice 
+cv_out <- cv.glmnet(x, y, alpha = 1)
+cv_rid <- cv.glmnet(x, y, alpha = 0)
+mod_step <- step(lm(SalePrice ~ ., data = train), trace = FALSE)
+
+
+for(i in 1:n){
+  tr <- train[-i, ]
+  te <- train[i, ]
+  x_tr <- model.matrix(SalePrice ~ ., tr)           # Preparing the training set
+  y_tr <- tr$SalePrice 
+  x1 <- model.matrix(SalePrice ~ ., te)
+  l_mod <- lm(SalePrice ~ ., data = tr)
+  las_mod <- glmnet(x_tr, y_tr, alpha = 1)
+  rid_mod <- glmnet(x_tr, y_tr, alpha = 0)
+  st_mod <- lm(formula(mod_step), data = tr)
+  options(warn = -1)
+  hat[i, 1] <- predict(l_mod, te)
+  hat[i, 2] <- predict(las_mod, x1, s = cv_out$lambda.min, 
+                       type = "response")
+  hat[i, 3] <- predict(rid_mod, x1, s = cv_rid$lambda.min, 
+                       type = "response")
+  hat[i, 4] <- predict(st_mod, te)
+  options(warn = 1)}
