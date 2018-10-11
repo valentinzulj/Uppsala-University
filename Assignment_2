@@ -119,11 +119,11 @@ bag <- function(B, train, test){
       pull(pred)
     options(warn = 1)
   }
-   y <- test %>%
-     pull(SalePrice)
-   hat <- rowMeans(y_hat)
-   rmse <- sqrt(mean(y-hat)^2)
-   return(rmse)
+  y <- test %>%
+    pull(SalePrice)
+  hat <- rowMeans(y_hat)
+  rmse <- sqrt(mean(y-hat)^2)
+  return(rmse)
 }
 
 
@@ -171,13 +171,16 @@ f_bag <- function(B, train, test){
   return(rmse)
 }
 
-f_bag(500, train, test)
+f_bag(5000, train, test)
 
+
+#### Stacking ####
 n <- nrow(train)
 hat <- matrix(NA, nrow = n, ncol = 4)
 x <- model.matrix(SalePrice ~ ., train)           # Preparing the training set
+x_test <- model.matrix(SalePrice ~ ., test)
 y <- train$SalePrice 
-cv_out <- cv.glmnet(x, y, alpha = 1)
+cv_las <- cv.glmnet(x, y, alpha = 1)
 cv_rid <- cv.glmnet(x, y, alpha = 0)
 mod_step <- step(lm(SalePrice ~ ., data = train), trace = FALSE)
 
@@ -194,9 +197,37 @@ for(i in 1:n){
   st_mod <- lm(formula(mod_step), data = tr)
   options(warn = -1)
   hat[i, 1] <- predict(l_mod, te)
-  hat[i, 2] <- predict(las_mod, x1, s = cv_out$lambda.min, 
+  hat[i, 2] <- predict(las_mod, x1, s = cv_las$lambda.min, 
                        type = "response")
   hat[i, 3] <- predict(rid_mod, x1, s = cv_rid$lambda.min, 
                        type = "response")
   hat[i, 4] <- predict(st_mod, te)
   options(warn = 1)}
+
+reg_y <- lm(y ~ hat)
+b <- matrix(reg_y$coefficients, ncol = 1)
+
+options(warn = -1)
+test_lm <- matrix(predict(lm(SalePrice ~ ., data = train), test), ncol = 1)
+test_step <- matrix(predict(mod_step, test), ncol = 1)
+test_lass <- matrix(predict(glmnet(x_tr, y_tr, alpha = 1), x_test, s = cv_las$lambda.min, 
+                     type = "response"), ncol = 1)
+test_rid <- matrix(predict(glmnet(x_tr, y_tr, alpha = 1), x_test, s = cv_rid$lambda.min, 
+                    type = "response"), ncol = 1)
+options(warn = 1)
+
+intercept <- matrix(1, nrow = 1465)
+
+predictions <- cbind(intercept, test_lm, test_lass, test_rid, test_step)
+
+stack_pred <- predictions %*% b
+y_test <- test %>%
+  pull(SalePrice)
+
+stack <- tibble(response = y_test,
+                predictions = as.numeric(stack_pred))
+
+stack <- stack %>%
+  mutate(dev_square = (response - predictions)^2) %>%
+  summarize(RMSE = sqrt(mean(dev_square)))
+stack
