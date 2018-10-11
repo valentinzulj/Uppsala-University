@@ -16,6 +16,7 @@
 \begin{document}
 <<include = FALSE>>=
 library(tidyverse)
+library(parallel)
   
 opts_chunk$set(size = "footnotesize",
   comment = NA,
@@ -24,21 +25,17 @@ opts_chunk$set(size = "footnotesize",
 
 @
 \maketitle
-
 \section{Ridge Regression}
 In this first section of our report, we will write a function -- \texttt{ridge} -- meant to calculate parameters of a ridge regression model. Furthermore, we will produce functions -- \texttt{pred} and \texttt{cv} -- that predict values using \texttt{ridge} and perform cross-validation respectively. In order to fulfill our task, we will use a set of data regarding the occurence of a prostate-specific antigen and certain clinical measures in men.
 
 Before we start doing any of the above, we import the data set from our working directory to the global environment of our \texttt{R} session. Also, knowing that our dependent variable is called \texttt{lpsa}, we assign it to an object. Furthermore, we create a vector containing the names of the covariates, setting the \texttt{group} variable aside for the moment.
 
 <<>>=
-load("prostate.Rdata")
-prostate <- as.tibble(prostate)
-
+load("prostate.RData")
 dep <- "lpsa"
-indep <- prostate         %>%
+indep <- prostate %>%               # Extracting covariate names
   select(-c(lpsa, group)) %>%
   colnames()
-
 @
 
 \noindent Now, we can start putting our functions together. In Section \ref{sec:ridge}, we produce \texttt{ridge}, which will compute the ridge coefficients $\bm{\hat{\beta}}_{ridge}$.
@@ -52,7 +49,7 @@ In writing the \texttt{ridge} function, we will start off by computing the indiv
 
 \noindent We begin by constructing the regressor matrix $\bm{X}$ which contains the values of our independent variables. However, in order to estimate a model with an intercept, we need to make sure the first column of the regressor matrix consists of only ones. We do this as follows:
 
-<<>>=
+<<eval = FALSE>>=
 int <- matrix(rep(1, nrow(prostate)), ncol = 1) # Intercept ones
 reg <- as.matrix(prostate %>% 
                    select(indep))               # Regressors
@@ -61,16 +58,16 @@ X <- cbind(int, reg)                            # Regressor matrix
 
 \noindent Adding to that, we use the same procedure to extract the dependent variable vector $\bm{y}$, and the identity matrix. $\lambda$ is a scalar of arbitrary value. In this specific case we set the value of $\lambda$ to be equal to 10.
 
-<<>>=
+<<eval = FALSE>>=
 y <- as.matrix(prostate %>%                      
                   select(dep))    # Dependent variable 
 I <- diag(ncol(X))                # Identity matrix      
 lambda <- 10
 @
 
-\noindent Using the matrices constructed above, estimation of the $\bm{\beta}$ vector is rather straightforward:
+noindent Using the matrices constructed above, estimation of the $\bm{\beta}$ vector is rather straightforward:
 
-<<>>=
+<<eval = FALSE>>=
 beta_ridge <- solve(crossprod(X,X) + 
                       lambda*I) %*% t(X) %*% y   # Estimated par vector
 @
@@ -78,31 +75,29 @@ beta_ridge <- solve(crossprod(X,X) +
 \noindent Finally, we can generalize the process an put everything together into the \texttt{ridge} function:
 
 <<>>=
-ridge <- function(data, dep, indep, lambda){      # Estimating betas
-  int <- matrix(rep(1, nrow(prostate)), ncol = 1) # Intercept ones
-  reg <- as.matrix(prostate %>% 
-                   select(indep))                 # Regressors
-  X <- cbind(int, reg) 
-  y <- as.matrix(prostate   %>%                      
-                  select(dep))                    # Dependent variable 
-  I <- diag(ncol(X))                              # Identity matrix      
+ridge <- function(data, dep, indep, lambda){  # Estimating betas
+  int <- matrix(rep(1, nrow(data)), ncol = 1) # Intercept ones
+  reg <- as.matrix(data %>%           # Indepentent vars
+                     select(indep)) 
+  X <- cbind(int, reg)                # Regressor matrix
+  y <- as.matrix(data %>%             # Dependent variable
+                   select(dep))
   lambda <- lambda
-  beta_ridge <- solve(crossprod(X,X) + 
-                      lambda*I) %*% t(X) %*% y    # Estimated par vector
-  beta_ridge = as.vector(beta_ridge)              # Vectorizing output
+  Id <- diag(ncol(X))                 # Identity matrix
+  beta_ridge <- solve(crossprod(X,X) + lambda*Id) %*% t(X) %*% y
+  beta_ridge = as.vector(beta_ridge)  # Vectorizing output
   return(beta_ridge)}
 @
-
 \noindent The \texttt{ridge} function will return estimates of the $\beta$ parameters of our ridge regression model, with the first value in the vector giving the estimated intercept. To see whether the function actually works, we check the length of the vector containing the names of our independent variables
 
-<<>>=
+<<eval = FALSE>>=
 length(indep)
 @
 
 \noindent After that we assign run the \texttt{ridge} function and assign it to an arbitrary object name, and see that it contains one more observation than the covariate vector, namely the intercept. Moreover, we make sure the function returns a vector, seeing as that would be of great use in the coming sections.
 
 <<>>=
-beta_hat <- ridge(prostate, dep, indep , 10)  # Saving betas
+beta_hat <- ridge(prostate, dep, indep, 10)  # Saving betas
 length(beta_hat)
 class(beta_hat)
 beta_hat
@@ -122,11 +117,11 @@ The ridge regression model is rather simliar to one estimated using ordinary lea
 
 \noindent Hence, our \texttt{pred} function will only need to perform a simple matrix multiplication. As before, we begin by constructing the two matrices needed, and then procced to computing the actual estimates:
 
-<<>>=
-int <- matrix(rep(1, nrow(prostate)), ncol = 1) # Intercept ones
-reg <- as.matrix(prostate %>%                   # Indepentent vars
+<<eval = FALSE>>=
+intercept <- matrix(rep(1, nrow(prostate)), ncol = 1) # Intercept ones
+regressors <- as.matrix(prostate %>%                   # Indepentent vars
                      select(indep)) 
-X <- cbind(int, reg)                            # Regressor matrix
+X_mat <- cbind(int, reg)                            # Regressor matrix
 B <- as.matrix(beta_hat)                        # Beta vector
 preds <- X %*% B                                # Predicted values 
 @
@@ -134,17 +129,16 @@ preds <- X %*% B                                # Predicted values
 \noindent What is left is generalizing the procedure and summarizing it into the \texttt{preds} function:
 
 <<>>=
-pred <- function(data, indep, beta_hat){          # Computing yhats
-  int <- matrix(rep(1, nrow(prostate)), ncol = 1) # Intercept ones
-  reg <- as.matrix(prostate %>%                   # Indepentent vars
+pred <- function(data, indep, beta_hat){      # Estimating yhats
+  int <- matrix(rep(1, nrow(data)), ncol = 1) # Intercept ones
+  reg <- as.matrix(data %>%           # Indepentent vars
                      select(indep)) 
-  X <- cbind(int, reg)                            # Regressor matrix
-  B <- as.matrix(beta_hat)                        # Beta vector
-  preds <- X %*% B                                # Predicted values 
-  preds <- as.vector(preds)                       # Vectorising output
+  X <- cbind(int, reg)                # Regressor matrix
+  B <- as.matrix(beta_hat)            # Betas as matrix
+  preds <- X %*% B                    # Predicted values
+  preds <- as.vector(preds)
   return(preds)}
 @
-
 \noindent In order to display the fitted values, we run the \texttt{pred} using the prostate data, and show the first 14 -- for the sake of symmetry -- values of output:
 
 <<>>>=
@@ -155,4 +149,189 @@ pred_vals[1:14]
 \noindent The predicted values alone are not guaranteed to be of any particular use, seeing as the model itself might not be very good. However, in Section \ref{sec:cv} we will write a function performing k-fold cross-validation and try to see how good the model actually is.
 
 \subsection{Cross Validaton} \label{sec:cv}
+K-fold cross-validation is a method used to investigate how the mean squared error of a model differs when different samples are used. In this section, we will write a function called \texttt{cv}, which strives to perform k-fold cross-validation.
 
+We start off by determining how many folds are embedded in the data, as well as preallocating a vector for storing the computed mean squared errors.
+
+<<eval = FALSE>>=
+k <- length(unique(prostate$group))
+mse <- numeric(k)
+@
+
+\noindent As for the cross-validation, we need to write a loop that trains a model using $k-1$ of the folds that are available, and uses the trained model to predict the response vector of the fold that was not used in training. We want this calculation to be made $k$ times, so that every fold is left out once. The loop is constructed as follows:
+
+<<eval = FALSE>>=
+  for(i in 1:k){                           # One rep per fold
+    X <- prostate %>%
+      filter(group != i)                   # Folds used in training
+    X_pred <- prostate %>%
+      filter(group == i)                   # Fold left out
+    Y <- X_pred %>%
+      pull(dep)                            # Vector to predict
+    betas <- ridge(X, dep = dep,
+                   indep = indep,
+                   lambda = 10)            # Estimating betas
+    pre <- pred(X_pred, indep, betas)      # Predictin k:th fold
+    error[i] <- mean((Y-pre)^2)}           # Mean of MSE:s
+
+
+@
+
+\noindent The loop leaves us with with an MSE vector of length $k$. However, we want our function to return one single value. Thus, in writing the function, we make sure it returns the mean of the MSE vector:
+
+<<>>=
+cv <- function(data, dep, indep, lambda){
+  n <- length(unique(data$group))    # Number of groups
+  mse <- numeric(n)                  # Preallocation
+  for (i in 1:n){                    # One per group
+    X <- data %>%                    # Filtering groups
+      filter(group != i)
+    X_pred <- data %>%
+      filter(group == i)             # Data for prediction
+    Y <- X_pred %>% 
+      pull(dep)                      # Values to predict
+    betas <- ridge(X, dep = dep,     # Dependent var
+                   indep = indep,    # Independent vars
+                   lambda = lambda)
+    preds <- pred(X_pred, indep, 
+                  betas)             # Using estimated betas
+    mse[i] <- mean((Y - preds)^2)    # Computing MSE
+  }
+  mse <- as.vector(mean(mse))        # Mean of MSE:s
+  return(mse)
+}
+@
+
+\noindent Now, using the function on our prostate data, we can perform $k$-fold cross-validation and get one mean value as output:
+
+<<>>=
+cv(prostate, dep, indep, 10)
+@
+
+\noindent Of course, the value of $\lambda$ will have an impact on the MSE of the model, seeing as it tunes the penalty of adding an extra variable to the model. Hence, in Section \ref{sec:lamb}, we will take a closer look on the effecte of the tuning parameter on the MSE of the model.
+
+\subsection{The Effect of $\lambda$} \label{sec:lamb}
+In ridge regression, $\lambda$ is a scalar parameter that determines the level of the penalty placed on introducing an extra variable into a model. Hence, it will have an impact on the mean squared error on the model. In this section, we will run \texttt{cv} for 50 different values of $\lambda$, when $\lambda$ varies on an interval of $[0, 50]$.
+
+Testing the effect means putting  \texttt{cv} in a loop, evaluating it for 50 different $\lambda$. We do this in the chunk of code presented below:
+
+<<>>=
+l <- seq(0, 50, length.out = 50)    # Setting lambda values
+mse <- numeric(length(l))           # Preallocation
+
+for(i in 1:length(l)){              # 50 reps of cv
+  mse[i] <- cv(prostate, "lpsa", indep, l[i])}
+@
+
+\noindent The results of the loop are presented in Figure \ref{fig:lambd}. As can be seen, the prostate data set does not need a particularly high value of $\lambda$ to minimise the mean squared error. 
+
+<<lambd, echo = FALSE, fig.align = "center", fig.height = 4, fig.asp = 0.62, fig.cap = "The effect of tuning on MSE", fig.pos = "h!">>=
+mse %>%
+  enframe() %>% 
+  ggplot() +
+  geom_line(aes(x = name, y = value, color = "red"), 
+            size = 2) +
+  scale_x_discrete(limits = c(seq(0, 50, by = 10))) +
+  labs(x = expression(lambda),
+       y = "MSE",
+       title = expression(MSE~plotted~against~lambda)) +
+  theme_classic() +
+  theme(plot.title = element_text(face = "bold",              
+                                  hjust = 0.5, size = 15),
+        axis.title.x = element_text(size = 15),
+        panel.grid.major = element_line(color = "gray90"),
+        axis.ticks = element_blank()) + 
+  guides(color = FALSE)
+@
+
+\newpage
+
+\section{Predicting House Prices}
+<<>>=
+house <- as.tibble(read.csv("house_prices.csv"))
+train <- as.tibble(house %>%
+                     filter(train == TRUE))
+test <- as.tibble(house  %>%
+                    filter(train == FALSE))
+@
+
+\subsection{Penalized Regression}
+\subsubsection{Ridge}
+
+\subsubsection{LASSO}
+
+\subsection{Ensemble Methods}
+\subsubsection{Bagging}
+Bagging is a method for bootstrap aggregation which is based on fitting specially selected models to different bootstrap samples in order to predict the same response variable a large number of times. Doing so allows us use the mean of these predictions as a final estimate of the response. This section will aim to write a function that performs bagging, and apply it to the data on house prices.
+
+Clearly, the repetitive block of the function will need to involve a loop, and so, we need to create a matrix for the output of the loop. If \texttt{B} is the arbitrary amount of times we want to run our loops, and the size of each bootstrap sample is 1465, the matrix will be generated as follows:
+
+<<eval = FALSE>>=
+B <- <number of repetitions>
+y_hat <- matrix(NA, nrow = 1465, ncol = B)   # Preallocation
+@
+
+\noindent Seeing as \texttt{B} is the number of columns in the output matrix, we want the predictions produced by every round of the loop to be stored in a separate column. Hence, we write the loop as follows:
+
+<<eval = FALSE>>=
+for(i in 1:B){
+  sample <- sample_n(train, 1465, replace = TRUE)  # Bootstrap sample
+  mod <- lm(SalePrice ~ ., data = sample)          # Full model
+  mod_sel <- step(mod, trace = FALSE)              # Model selection
+  mod_step <- lm(formula(mod_sel), data = sample)  # Best model
+  
+  opions(warn = -1)                                # Kills warning message
+  y_hat{, i} <- test          %>%
+    add_predictions(mod_step) %>%
+    pull(pred)                                     # Storing predictions
+  options(warn = 1)}
+@
+
+\noindent The \texttt{step()} function is used in order to find the model 'best suited' for each sample. In doing so it makes use of backward-forward selection. \texttt{step()} produces a tremendous amout of output, which is why \texttt{trace} has been set to be \texttt{FALSE}.
+
+Having completed the loop, we place it in a function named \texttt{bag}, and make sure the function returns the root mean squared error of the predictions made using bagging.
+
+\newpage
+
+<<>>=
+bag <- function(B, train, test){
+  y_hat <- matrix(NA, nrow = 1465, ncol = B)        # Preallocation
+  
+  for(i in 1:B){
+    sample <- sample_n(train, 1465, replace = TRUE) # Sample from sample
+    mod <- lm(SalePrice ~ ., data = sample)         # Full model
+    mod_sel <- step(mod, trace = FALSE)             # Model selection
+    mod_step <- lm(formula(mod_sel), data = sample) # Reduced model
+    
+    options(warn = -1)                              # Kills warning message
+    y_hat[, i] <- test           %>%
+      add_predictions(mod_step)  %>% 
+      pull(pred)                                    # Predictions
+    options(warn = 1)
+  }
+   y <- test %>%
+     pull(SalePrice)                                # Response
+   hat <- rowMeans(y_hat)                           # Means of predictions
+   rmse <- sqrt(mean(y-hat)^2)                      # Root mean squared error
+   return(rmse)}
+@
+
+\noindent \texttt{bag} is rather slow, and evaluating it using any meaningful value of \texttt{B} would be incredibly inefficient. Because of this, we turn to parallel computing in order to save time in running the function. To do this, we use the following code:
+
+<<eval = FALSE >>=
+cl <- makeCluster(4)                               # Setting up workers
+clusterEvalQ(cl, {
+  library(tidyverse)
+  library(modelr)})                               # Packages for workers
+clusterExport(cl, varlist = c("train", "test"))   # Variables to workers
+
+parallel <- parSapply(cl, rep(250,4), FUN = bag, 
+                      train = train, test = test)  # Parallel computing
+parallel <- mean(parallel)                         # Final value
+parallel
+stopCluster(cl)                                    # Stopping workers
+@
+
+
+
+\end{document}
