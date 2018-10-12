@@ -127,8 +127,21 @@ for(i in 1:nrow(rmse_final)){
   rmse_final[i, 4] <- (sqrt(1465/ch2))*models_rmse[i]
 }
 
-rmse_final$names <- factor(rmse_final$names, levels = rmse_final$names[order(rmse_final$RMSE)])
+rmse_final$names <- factor(rmse_final$names, 
+                           levels = rmse_final$names[order(rmse_final$RMSE)])
 ggplot(rmse_final, aes(x = RMSE, y = names)) +
-  geom_point(size = 4) +
-  geom_errorbarh(aes(xmax = upper, xmin = lower))
+  geom_point(aes(size = 3, color = factor(X1))) +
+  geom_errorbarh(aes(xmax = upper, xmin = lower, color = factor(X1)),
+                 height = 0.4) +
+  theme_classic() + 
+  scale_color_discrete(labels = c("Ridge", "Stacking", "LASSO",
+                                  "Step", "Linear", "Bag", "Feature bag"),
+                       name = "      Model") +
+  scale_y_discrete(breaks = c("ctrl", "trt1", "trt2"),
+                   labels = NULL) +
+  scale_x_continuous(breaks = c(seq(32000, 41000, by = 1000)), 
+                     limits = c(32000, 41000)) +
+  labs(y = NULL) +
+  guides(size = FALSE) +
+  theme(panel.grid.major.x = element_line(color = "gray90"))
 @
