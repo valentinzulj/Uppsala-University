@@ -38,7 +38,7 @@ colnames(models_rmse) <-
     "bagging", "feature bagging", "stacking")
 @
 
-The first model is a linear regression model with all 20 variables included. The RMSE for this model is 18 758.
+The first model is a linear regression model with all 20 variables included. The RMSE for this model is 35 667.
 
 <<warning=FALSE>>=
 lr_all <- lm(SalePrice ~ ., data = train) # Linear model
@@ -47,35 +47,23 @@ lr_all_pred <- predict.lm(lr_all,
 lr_all_mse <- 
   (test$SalePrice - lr_all_pred)^2        # Squared error
 print(models_rmse[1, 1] <- 
-  mean(sqrt(lr_all_mse)))                 # RMSE for lr_all
+  sqrt(mean(lr_all_mse)))                 # RMSE for lr_all
 @
 
-The next model is also a linear regression model, but the included variables have been chosen using the step-wise procedure in the function \texttt{step()}. The direction of the step-wise search have been set to both. The RMSE for the model given by this method is 18 713, so just a little bit better than with all variables included.
-<<include = FALSE>>=
-lr_all <- lm(SalePrice ~ ., data = train)       
+The next model is also a linear regression model, but the included variables have been chosen using the step-wise procedure in the function \texttt{step()}. The direction of the step-wise search have been set to both. The RMSE for the model given by this method is 35 609, so just a little bit better than with all variables included.
+
+<<warning=FALSE>>=
 lr_step <- step(lr_all,                   # R choose variables
-                direction = "both")      
+      direction = "both", trace = FALSE)      
 lr_step_pred <- predict.lm(lr_step, 
         test, type = "response")          # Predicting test set
 lr_step_mse <- 
   (test$SalePrice - lr_step_pred)^2       # Squared error
-@
-
-
-<<eval = FALSE >>=
-lr_all <- lm(SalePrice ~ ., data = train)       
-lr_step <- step(lr_all,                   # R choose variables
-                direction = "both")      
-lr_step_pred <- predict.lm(lr_step, 
-        test, type = "response")          # Predicting test set
-lr_step_mse <- 
-  (test$SalePrice - lr_step_pred)^2       # Squared error
-<<eval=TRUE>>=
 print(models_rmse[1, 2] <- 
-        mean(sqrt(lr_step_mse)))          # RMSE for lr_step
+        sqrt(mean(lr_step_mse)))          # RMSE for lr_step
 @
 
-We move on to penalized regression, starting with a ridge regression model. The value of lambda decides how much the coefficients are beeing penalized. We find the best value of lambda by cross validation on the training set. The value of lambda that minimizes the mean square error (MSE) in the cross validation is chosen as the lambda in the prediction of the test set. The RMSE of this model is 18 676, a small improvement compared to the previous models.
+We move on to penalized regression, starting with a ridge regression model. The value of lambda decides how much the coefficients are beeing penalized. We find the best value of lambda by cross validation on the training set. The value of lambda that minimizes the mean square error (MSE) in the cross validation is chosen as the lambda in the prediction of the test set. The RMSE of this model is 34 322, an improvement compared to the previous models.
 
 <<>>=
 set.seed(1)
@@ -89,10 +77,10 @@ ridge_pred <- predict(cv_out,             # Predicting, lambda = value
         xtest, lambda = cv_out$cv.min)    # that minimize MSE from CV
 ridge <- (test$SalePrice - ridge_pred)^2  # Squared error
 print(models_rmse[1, 3] <- 
-        mean(sqrt(ridge)))                # RMSE for ridge
+        sqrt(mean(ridge)))                # RMSE for ridge
 @
 
-The next model is LASSO, which is similar to ridge regression but with the difference that it can impel the coefficients to be zero. The value of lambda is found by the same procedure as in ridge regression. The RMSE of the LASSO model is 18 574, which is just about 100 dollars more accurate than the ridge regression model.
+The next model is LASSO, which is similar to ridge regression but with the difference that it can impel the coefficients to be zero. The value of lambda is found by the same procedure as in ridge regression. The RMSE of the LASSO model is 35 127, which puts it on second place when it comes to prediction accuracy.
 
 <<>>=
 set.seed(1)
@@ -102,44 +90,38 @@ lasso_pred <- predict(cv_out_lasso,       # Predicting, lambda = value
   xtest, lambda = cv_out_lasso$cv.min)    # that minimize MSE from CV
 lasso <- (ytest - lasso_pred)^2           # Squared error
 print(models_rmse[1, 4] <- 
-  mean(sqrt(lasso)))                      # RMSE for LASSO
+  sqrt(mean(lasso)))                      # RMSE for LASSO
 @
 
-Last up, we have stacking, which can be seen as a multi stage rocket for prediction. In the first stage, we use the models achieved earlier (\texttt{lr\_all, lr\_step, ridge} and \texttt{LASSO}) to predict the sale prices in the training set. This yields four predictions for each observation. In the next stage, we regress the true values on the predicted values. This gives us a linear model, here called \texttt{stacking\_pred\_mod}. Now we use the same models to predict the sale prices in the test set, giving us four predictions for each observation. In the last stage, we use the predicted values to predict the sale prices with the linear model \texttt{stacking\_pred\_mod}. Surprisingly, this turned out to be the worst model for predicting the sale prices in the test set, with a RMSE of 18 792.
+Last up, we have stacking, which can be seen as a multi stage rocket for prediction. In the first stage, we use leave one out cross validation (LOOCV) to predict the prices in the training set. This yields four predictions for each observation. In the next stage, we regress the true values on the predicted values. This gives us a linear model, here called \texttt{stacking\_pred\_mod}. Now we use the models achieved earlier (\texttt{lr\_all, lr\_step, ridge} and \texttt{LASSO}) to predict the sale prices in the training set. Again, this gives us four predictions for each observation. In the last stage, we use the theese values to predict the sale prices with the linear model \texttt{stacking\_pred\_mod}. Surprisingly, this turned out to be the worst model for predicting the sale prices in the test set, with a RMSE of 18 792.
 
 <<warning = FALSE>>=
-lr_all_pred_train <- 
-  predict.lm(lr_all, 
-             test, type = "response")     # Predicting train set
-lr_step_pred_train <- 
-  predict.lm(lr_step, 
-             train, type = "response")    # Predicting train set
-ridge_pred_train <- 
-  predict(cv_out, xtest, 
-          lambda = cv_out$cv.min)         # Predicting train set
-lasso_pred_train <- 
-  predict(cv_out_lasso, x, 
-          lambda = cv_out_lasso$cv.min)   # Predicting train set
-second_layer_train <- 
-  as.data.frame(cbind(y, 
-  lasso_pred_train, ridge_pred_train, 
-  lr_all_pred_train, lr_step_pred_train)) # Column bind with true values
-colnames(second_layer_train)[2:5] <- 
-  c("lasso_pred", "ridge_pred", 
-    "lr_all_pred", "lr_step_pred")        # Setting column names
-stacking_pred_mod <- 
-  lm(y ~ ., data = second_layer_train)    # Regressing true value on predicted
-second_layer_test <- 
-  as.data.frame(cbind(lasso_pred, 
-  ridge_pred, lr_all_pred, lr_step_pred)) # Column bind test predictions
-colnames(second_layer_test)[1:2] <- 
-  c("lasso_pred", "ridge_pred")           # Setting column names
-pred_stacking <- 
-  predict.lm(stacking_pred_mod, 
-  second_layer_test, type = "response")   # Predicting
-stacking <- (ytest - pred_stacking)^2     # Squared error
-print(models_rmse[1, 7] <- 
-        mean(sqrt(stacking)))             # RMSE for stacking
+lr_step <- step(lm(SalePrice ~ ., 
+  data = train), direction = "both", 
+  trace = FALSE)                         # Finding step model
+n <- nrow(train)
+y_hat <- matrix(nrow = n, ncol = 4)      # Matrix for predictions
+for (i in 1:n) {
+  set.seed(1)
+  train1 <- train[-i, ]                  # LOOCV
+  test1 <- train[i, ]
+  x <- model.matrix(SalePrice ~ ., 
+                    train1)              
+  y <- train1$SalePrice                                  
+  xtest1 <- model.matrix(SalePrice ~ ., test1)            
+  ytest1 <- test$SalePrice   
+  
+  mod_lr <- lm(SalePrice ~ ., data = train)
+  mod_step <- lm
+  cv_out_ridge <- cv.glmnet(x, y, alpha = 0)
+  cv_out_lasso <- cv.glmnet(x, y, alpha = 1)
+  
+  y_hat[i, 1] <- predict(mod_lr, test1)
+  y_hat[i, 2] <- predict(lr_step, test1)
+  y_hat[i, 3] <- predict(cv_out_ridge, xtest1, lambda = cv_out$cv.min)
+  y_hat[i, 4] <- predict(cv_out_lasso, xtest1,lambda = cv_out_lasso$cv.min)
+}
+
 @
 
 
