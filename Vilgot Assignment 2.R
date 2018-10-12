@@ -101,3 +101,8 @@ pred_stacking <-
 stacking <- (ytest - pred_stacking)^2     # Squared error
 print(models_rmse[1, 7] <- 
         mean(sqrt(stacking)))             # RMSE for stacking
+
+rmse_final$names <- factor(rmse_final$names, levels = rmse_final$names[order(rmse_final$RMSE)])
+ggplot(rmse_final, aes(x = RMSE, y = names)) +
+  geom_point(size = 4) +
+  geom_errorbarh(aes(xmax = upper, xmin = lower))
