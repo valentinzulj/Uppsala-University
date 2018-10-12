@@ -139,8 +139,8 @@ ggplot(rmse_final, aes(x = RMSE, y = names)) +
                        name = "      Model") +
   scale_y_discrete(breaks = c("ctrl", "trt1", "trt2"),
                    labels = NULL) +
-  scale_x_continuous(breaks = c(seq(32000, 41000, by = 1000)), 
-                     limits = c(32000, 41000)) +
+  scale_x_continuous(breaks = c(seq(32000, 40000, by = 1000)), 
+                     limits = c(32000, 40000)) +
   labs(y = NULL) +
   guides(size = FALSE) +
   theme(panel.grid.major.x = element_line(color = "gray90"))
