@@ -106,3 +106,29 @@ rmse_final$names <- factor(rmse_final$names, levels = rmse_final$names[order(rms
 ggplot(rmse_final, aes(x = RMSE, y = names)) +
   geom_point(size = 4) +
   geom_errorbarh(aes(xmax = upper, xmin = lower))
+
+Finally, we plot the RMSE for each model among with the calculated confidence interval.
+
+<<>>=
+rmse_final <- matrix(nrow = 7, ncol = 4)
+rmse_final <- as.data.frame(rmse_final)
+rownames(rmse_final) <- 
+  c("lr_all", "lr_step", "ridge", "LASSO", 
+    "bagging", "feature bagging", "stacking")
+colnames(rmse_final) <- c("names", "lower", "RMSE", "upper")
+rmse_final[, 1] <- c("Linear all", "Linear step", "Ridge", "LASSO", 
+                     "Bagging", "Feature bagging", "Stacking")
+
+ch1 <- qchisq(0.975, df=1465)
+ch2 <- qchisq(0.025, df=1465)
+for(i in 1:nrow(rmse_final)){
+  rmse_final[i, 2] <- (sqrt(1465/ch1))*models_rmse[i]
+  rmse_final[i, 3] <- models_rmse[i]
+  rmse_final[i, 4] <- (sqrt(1465/ch2))*models_rmse[i]
+}
+
+rmse_final$names <- factor(rmse_final$names, levels = rmse_final$names[order(rmse_final$RMSE)])
+ggplot(rmse_final, aes(x = RMSE, y = names)) +
+  geom_point(size = 4) +
+  geom_errorbarh(aes(xmax = upper, xmin = lower))
+@
