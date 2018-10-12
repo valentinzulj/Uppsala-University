@@ -142,6 +142,7 @@ ggplot(rmse_final, aes(x = RMSE, y = names)) +
   scale_x_continuous(breaks = c(seq(32000, 40000, by = 1000)), 
                      limits = c(32000, 40000)) +
   labs(y = NULL) +
-  guides(size = FALSE) +
+  guides(size = FALSE,
+         colour = guide_legend(reverse=T)) +
   theme(panel.grid.major.x = element_line(color = "gray90"))
 @
