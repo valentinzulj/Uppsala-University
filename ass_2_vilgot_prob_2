@@ -93,44 +93,86 @@ print(models_rmse[1, 4] <-
   sqrt(mean(lasso)))                      # RMSE for LASSO
 @
 
-Last up, we have stacking, which can be seen as a multi stage rocket for prediction. In the first stage, we use leave one out cross validation (LOOCV) to predict the prices in the training set. This yields four predictions for each observation. In the next stage, we regress the true values on the predicted values. This gives us a linear model, here called \texttt{stacking\_pred\_mod}. Now we use the models achieved earlier (\texttt{lr\_all, lr\_step, ridge} and \texttt{LASSO}) to predict the sale prices in the training set. Again, this gives us four predictions for each observation. In the last stage, we use the theese values to predict the sale prices with the linear model \texttt{stacking\_pred\_mod}. Surprisingly, this turned out to be the worst model for predicting the sale prices in the test set, with a RMSE of 18 792.
+Last up, we have stacking, which can be seen as a multi stage rocket for prediction. In the first stage, we use leave one out cross validation (LOOCV) to predict the prices in the training set. This yields four predictions for each observation. In the next stage, we regress the true values on the predicted values. This gives us a linear model, here called \texttt{reg\_y}. Now we use the models achieved earlier (\texttt{lr\_all, lr\_step, ridge} and \texttt{LASSO}) to predict the sale prices in the training set. Again, this gives us four predictions for each observation. In the last stage, we use the theese values to predict the sale prices with the linear model \texttt{reg\_y}. This turned out to be the best model for predicting the sale prices in the test set, with a RMSE of 34 783.
 
 <<warning = FALSE>>=
-lr_step <- step(lm(SalePrice ~ ., 
-  data = train), direction = "both", 
-  trace = FALSE)                         # Finding step model
 n <- nrow(train)
-y_hat <- matrix(nrow = n, ncol = 4)      # Matrix for predictions
-for (i in 1:n) {
-  set.seed(1)
-  train1 <- train[-i, ]                  # LOOCV
-  test1 <- train[i, ]
-  x <- model.matrix(SalePrice ~ ., 
-                    train1)              
-  y <- train1$SalePrice                                  
-  xtest1 <- model.matrix(SalePrice ~ ., test1)            
-  ytest1 <- test$SalePrice   
-  
-  mod_lr <- lm(SalePrice ~ ., data = train)
-  mod_step <- lm
-  cv_out_ridge <- cv.glmnet(x, y, alpha = 0)
-  cv_out_lasso <- cv.glmnet(x, y, alpha = 1)
-  
-  y_hat[i, 1] <- predict(mod_lr, test1)
-  y_hat[i, 2] <- predict(lr_step, test1)
-  y_hat[i, 3] <- predict(cv_out_ridge, xtest1, lambda = cv_out$cv.min)
-  y_hat[i, 4] <- predict(cv_out_lasso, xtest1,lambda = cv_out_lasso$cv.min)
-}
+hat <- matrix(NA, nrow = n, ncol = 4)
+x <- model.matrix(SalePrice ~ ., train)   # Preparing the training set
+x_test <- 
+  model.matrix(SalePrice ~ ., test)       # Preparing test set
+y <- train$SalePrice 
+cv_las <- cv.glmnet(x, y, alpha = 1)      # LASSO model
+cv_rid <- cv.glmnet(x, y, alpha = 0)      # Ridge model
+mod_step <- 
+  step(lm(SalePrice ~ ., 
+          data = train), trace = FALSE)   # Step model
+for(i in 1:n){
+  tr <- train[-i, ]                       # LOOCV
+  te <- train[i, ]
+  x_tr <- 
+    model.matrix(SalePrice ~ ., tr)       
+  y_tr <- tr$SalePrice 
+  x1 <- model.matrix(SalePrice ~ ., te)
+  l_mod <- lm(SalePrice ~ ., data = tr)
+  las_mod <- 
+    glmnet(x_tr, y_tr, alpha = 1)
+  rid_mod <- 
+    glmnet(x_tr, y_tr, alpha = 0)
+  st_mod <- 
+    lm(formula(mod_step), data = tr)
+  options(warn = -1)
+  hat[i, 1] <- predict(l_mod, te)        # Lr prediction
+  hat[i, 2] <- predict(las_mod, x1, 
+              s = cv_las$lambda.min, 
+              type = "response")         # Lasso prediction
+  hat[i, 3] <- predict(rid_mod, x1,
+              s = cv_rid$lambda.min, 
+              type = "response")         # Ridge prediction
+  hat[i, 4] <- predict(st_mod, te)       # Step prediction
+  options(warn = 1)}
+
+reg_y <- lm(y ~ hat)                     # Regressing predictions
+b <- 
+  matrix(reg_y$coefficients, ncol = 1)   # Saving coefficients
+
+options(warn = -1)
+test_lm <- matrix(predict
+   (lm(SalePrice ~ ., data = train), 
+     test), ncol = 1)                    # Predicting lr
+test_step <- matrix(predict
+        (mod_step, test), ncol = 1)      # Predicting step
+test_lass <- matrix(
+  predict(glmnet(x_tr, y_tr, alpha = 1),
+          x_test, s = cv_las$lambda.min, 
+          type = "response"), ncol = 1)  # Predicting LAsso
+test_rid <- matrix(
+  predict(glmnet(x_tr, y_tr, alpha = 1),
+          x_test, s = cv_rid$lambda.min, 
+          type = "response"), ncol = 1)  # Predicting Ridge
+options(warn = 1)
+
+intercept <- matrix(1, nrow = 1465)
+
+predictions <- cbind(intercept, 
+      test_lm, test_lass, 
+      test_rid, test_step)               # Column bind predictions
+
+stack_pred <- predictions %*% b          # Multiplying with coeffs
+y_test <- test %>%
+  pull(SalePrice)
+
+stack <- tibble(response = y_test,
+  predictions = as.numeric(stack_pred))  # Binding true and predicted
+
+stack <- stack %>%
+  mutate(dev_square = 
+      (response - predictions)^2) %>%
+  summarize(RMSE = 
+      sqrt(mean(dev_square)))            # RMSE
+print(models_rmse[1, 7] <- stack)
 
 @
 
-
-<<>>=
-lower <- sqrt(1465/qchisq(0.975, df=1465))
-upper <- sqrt(1465/qchisq(0.025, df=1465))
-lower * 18792
-upper * 18792
-
-@
 
 \end{document}
