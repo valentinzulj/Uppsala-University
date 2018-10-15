@@ -432,7 +432,7 @@ for(i in 1:B){
 feature_bag <- function(B, train, test){
   y_hat <- matrix(NA, nrow = 1465, ncol = B) # Preallocation  
   covariates <- train            %>%
-    select(SalePrice)            %>%
+    select(-SalePrice)            %>%
     colnames()                              # Covariates to sample from
   dep <- train                   %>%                   
     select(SalePrice)            %>%
