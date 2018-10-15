@@ -384,6 +384,7 @@ clusterExport(cl, varlist = c("train", "test"))    # Variables to workers
 parallel <- parSapply(cl, rep(250,4), FUN = bag, 
                       train = train, test = test)  # Parallel computing
 parallel <- mean(parallel)                         # Final value
+models_rmse[5] <- parallel
 parallel
 stopCluster(cl)                                    # Stopping workers
 @
@@ -461,7 +462,8 @@ feature_bag <- function(B, train, test){
 \noindent Evaluating the \texttt{feature\_bag} using 5000 bootstrap samples yields the following RMSE:
 
 <<eval = FALSE>>=
-feature_bag(5000, train, test) 
+set.seed(1)  
+models_rmse[6] <- feature_bag(5000, train, test) 
 @
 
 \subsubsection{Stacking} \label{sec:stack}
