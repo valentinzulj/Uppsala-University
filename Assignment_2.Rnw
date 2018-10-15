@@ -384,7 +384,6 @@ clusterExport(cl, varlist = c("train", "test"))    # Variables to workers
 parallel <- parSapply(cl, rep(250,4), FUN = bag, 
                       train = train, test = test)  # Parallel computing
 parallel <- mean(parallel)                         # Final value
-models_rmse[5] <- parallel
 parallel
 stopCluster(cl)                                    # Stopping workers
 @
@@ -432,7 +431,7 @@ for(i in 1:B){
 feature_bag <- function(B, train, test){
   y_hat <- matrix(NA, nrow = 1465, ncol = B) # Preallocation  
   covariates <- train            %>%
-    select(-SalePrice)            %>%
+    select(-SalePrice)           %>%
     colnames()                              # Covariates to sample from
   dep <- train                   %>%                   
     select(SalePrice)            %>%
@@ -443,7 +442,7 @@ feature_bag <- function(B, train, test){
     sample <- sample_n(train, 1465, 
                        replace = TRUE)      # Sample
     sample_covariates <- sample(covariates, sqp, replace = FALSE)           # Sample covariates
-    formula <- paste(dep, '~', paste(sample_covariates, collapse = ' + ')) # Regression formula
+    formula <- paste(dep, '~', paste(sample_covariates, collapse = ' + '))  # Regression formula
     mod <- lm(formula, data = sample)       # Regression model
     
     options(warn = -1)                      # Kills warining message
@@ -462,14 +461,12 @@ feature_bag <- function(B, train, test){
 \noindent Evaluating the \texttt{feature\_bag} using 5000 bootstrap samples yields the following RMSE:
 
 <<eval = FALSE>>=
-set.seed(1)  
-models_rmse[6] <- feature_bag(5000, train, test) 
+feature_bag(5000, train, test) 
 @
 
 \subsubsection{Stacking} \label{sec:stack}
 Last up, we have stacking, which can be seen as a multi stage rocket for prediction. In the first stage, we use leave one out cross validation (LOOCV) to predict the prices in the training set. This yields four predictions for each observation. In the next stage, we regress the true values on the predicted values. This gives us a linear model, here called \texttt{stacking\_pred\_mod}. Now we use the models achieved earlier (\texttt{lr\_all, lr\_step, ridge} and \texttt{LASSO}) to predict the sale prices in the training set. Again, this gives us four predictions for each observation. In the last stage, we use the theese values to predict the sale prices with the linear model \texttt{stacking\_pred\_mod}. Surprisingly, this turned out to be the worst model for predicting the sale prices in the test set, with a RMSE of 34 783.
 We begin by setting up variables to be used in stacking:
-
 
 
 <<eval = FALSE>>=
@@ -517,9 +514,8 @@ for(i in 1:n){
 \noindent Moreover, we run a regression using the response of the training set as the dependent variable, and the predictions from above as predictors. Also, we store the coefficent of the regression model in a matrix \texttt{b}:
 
 <<eval = FALSE>>=
-reg_y <- lm(y ~ hat)                     # Regressing predictions
-b <- 
-  matrix(reg_y$coefficients, ncol = 1)   # Saving coefficients
+reg_y <- lm(y ~ hat)                        # Regressing predictions
+b <- matrix(reg_y$coefficients, ncol = 1)   # Saving coefficients
 @
 
 \noindent After that, we use the original models to predict the response of the test set, and regress the response of the test set on the predictions made, using the \texttt{reg\_y} regression model:
@@ -566,6 +562,17 @@ print(models_rmse[1, 7] <- stack)
 @
 
 \subsection{Comparing Estimates of RMSE}
+The final section of this report will give a comparison of how well the different models manage to predict the house prices given in our data set. The results will be presented in a figure, showing confidence intervals for the RMSE of each model. The intervals are given by
+
+\begin{align*}
+\left[ \sqrt{\frac{m}{\chi^{2}_{1-\alpha/2,m}}} RMSE, \; \sqrt{\frac{m}{\chi^{2}_{1-\alpha/2,m}}} RMSE \right],
+\end{align*}
+
+\noindent where $m = 1465$ and $\lambda = 0.05$.
+
+Now, in order to save tim not having to run the simulations throught \texttt{knitr}, we compute the intervals in our ordinary \texttt{R} session, save the intervals in a \texttt{.csv}, and load it into this environment to make the graph. We do this as follows:
+
+<<eval = FALSE>>=
 rmse_final <- matrix(nrow = 7, ncol = 4)
 rmse_final <- as.data.frame(rmse_final)
 rownames(rmse_final) <- 
@@ -573,16 +580,50 @@ rownames(rmse_final) <-
     "bagging", "feature bagging", "stacking")
 colnames(rmse_final) <- c("names", "lower", "RMSE", "upper")
 rmse_final[, 1] <- c("Linear all", "Linear step", "Ridge", "LASSO", 
-                     "Bagging", "Feature bagging", "Stacking")
+                     "Bagging", "Feature bagging", "Stacking")       # Output data frame
 
-ch1 <- qchisq(0.975, df=1465)
+ch1 <- qchisq(0.975, df=1465)                                        # Chi-squared values
 ch2 <- qchisq(0.025, df=1465)
 for(i in 1:nrow(rmse_final)){
-  rmse_final[i, 2] <- (sqrt(1465/ch1))*models_rmse[i]
-  rmse_final[i, 3] <- models_rmse[i]
-  rmse_final[i, 4] <- (sqrt(1465/ch2))*models_rmse[i]
-}
+  rmse_final[i, 2] <- (sqrt(1465/ch1))*models_rmse[i]                # Lower limit
+  rmse_final[i, 3] <- models_rmse[i]                                 # Point estimator
+  rmse_final[i, 4] <- (sqrt(1465/ch2))*models_rmse[i]}               # Upper limit
 
+write.csv(rmse_final, "rmse_final.csv")                              # Exporting .csv
+@
 
+\noindent With the \texttt{rmse\_final.csv} placed in our working directory, we can load it:
+
+<<>>=
+rmse_final <- read.csv("rmse_final.csv")
+@
+
+\newpage
+
+\noindent And use it to make the plot mentioned above:
+
+<<rmse, echo = FALSE, fig.height = 4, fig.cap = "Comparing RMSE for each model", fig.pos = "h!">>=
+rmse_final$names <- factor(rmse_final$names, 
+                           levels = rmse_final$names[order(rmse_final$RMSE)])
+ggplot(rmse_final, aes(x = RMSE, y = names)) +
+  geom_point(aes(size = 3, color = factor(X))) +
+  geom_errorbarh(aes(xmax = upper, xmin = lower, color = factor(X)),
+                 height = 0.4) +
+  theme_classic() + 
+  scale_color_discrete(labels = c("Ridge", "Stacking", "LASSO",
+                                  "Step", "Linear", "Bag", "Feature bag"),
+                       name = "      Model") +
+  scale_y_discrete(breaks = c("ctrl", "trt1", "trt2"),
+                   labels = NULL) +
+  scale_x_continuous(breaks = c(seq(32000, 40000, by = 1000)), 
+                     limits = c(32000, 40000)) +
+  labs(y = NULL,
+       x = expression(sqrt(MSE))) +
+  guides(size = FALSE,
+         colour = guide_legend(reverse=T)) +
+  theme(panel.grid.major.x = element_line(color = "gray90"))
+@
+
+\noindent In Figure \ref{fig:rmse}, the point estimates and confidence intervals of the RMSE for each model is presented. We can now see that the the Ridge- and Stacking models are better than the Feature bagging model.
 
 \end{document}
