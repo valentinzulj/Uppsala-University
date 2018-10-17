@@ -170,7 +170,7 @@ bag <- function(B, train, test){
   y <- test %>%
     pull(SalePrice)
   hat <- rowMeans(y_hat)
-  rmse <- sqrt(mean(y-hat)^2)
+  rmse <- sqrt(mean((y-hat)^2))
   return(rmse)
 }
 
@@ -216,7 +216,7 @@ f_bag <- function(B, train, test){
   y <- test %>%
     pull(dep)                               # Response
   hat <- rowMeans(y_hat)
-  rmse <- sqrt(mean(y - hat)^2)
+  rmse <- sqrt(mean((y - hat)^2))
   return(rmse)
 }
 
