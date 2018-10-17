@@ -103,24 +103,29 @@ mse %>%
   ) + 
   guides(color = FALSE)
 
+
 #### Linear model all variables included ####
-lr_all <- lm(SalePrice ~ ., data = train) # Linear model
+models_rmse <- data.frame("lr_all" = NA, "lr_step" = NA, "ridge" = NA, "LASSO" = NA,
+                          "bagging" = NA, "feature_bagging" = NA, "stacking" = NA)
+lr_all <- lm(SalePrice ~ ., data = train)           # Linear model
 lr_all_pred <- predict.lm(lr_all, 
-        test, type = "response")          # Predicting test set
+                          test, type = "response")  # Predicting test set
 lr_all_mse <- 
-  (test$SalePrice - lr_all_pred)^2        # Squared error
+  (test$SalePrice - lr_all_pred)^2                  # Squared error
 print(models_rmse[1, 1] <- 
-  sqrt(mean(lr_all_mse)))                 # RMSE for lr_all
-  
+        sqrt(mean(lr_all_mse)))                     # RMSE for lr_all
+
+
 #### Linear model using step ####
-lr_step <- step(lr_all,                   # R choose variables
-      direction = "both", trace = FALSE)      
+lr_step <- step(lr_all,                               # R choose variables
+                direction = "both", trace = FALSE)      
 lr_step_pred <- predict.lm(lr_step, 
-        test, type = "response")          # Predicting test set
+                           test, type = "response")   # Predicting test set
 lr_step_mse <- 
-  (test$SalePrice - lr_step_pred)^2       # Squared error
+  (test$SalePrice - lr_step_pred)^2                   # Squared error
 print(models_rmse[1, 2] <- 
-        sqrt(mean(lr_step_mse)))          # RMSE for lr_step
+        sqrt(mean(lr_step_mse)))                      # RMSE for lr_step
+
 
 #### Ridge ####
 x <- model.matrix(SalePrice ~ ., train)   # Preparing the training set
@@ -130,22 +135,25 @@ xtest <-
 ytest <- test$SalePrice                   # Response variable to predict
 cv_out <- cv.glmnet(x, y, alpha = 0)      # CV, ridge
 ridge_pred <- predict(cv_out,             # Predicting, lambda = value
-        xtest, lambda = cv_out$cv.min)    # that minimize MSE from CV
+                      xtest, lambda = cv_out$cv.min)    # that minimize MSE from CV
 ridge <- (test$SalePrice - ridge_pred)^2  # Squared error
 print(models_rmse[1, 3] <- 
         sqrt(mean(ridge)))                # RMSE for LASSO
-        
+
+
 #### LASSO ####
 cv_out_lasso <- 
   cv.glmnet(x, y, alpha = 1)              # Cross validation, LASSO
 lasso_pred <- predict(cv_out_lasso,       # Predicting, lambda = value
-  xtest, lambda = cv_out_lasso$cv.min)    # that minimize MSE from CV
+                      xtest, lambda = cv_out_lasso$cv.min) # that minimize MSE from CV
 lasso <- (ytest - lasso_pred)^2           # Squared error
 print(models_rmse[1, 4] <- 
-  sqrt(mean(lasso)))                      # RMSE for LASSO
+        sqrt(mean(lasso)))                # RMSE for LASSO
+
+
 #### Bagging ####
 bag <- function(B, train, test){
-  y_hat <- matrix(NA, nrow = 1465, ncol = B)           # Preallocation
+  y_hat <- matrix(NA, nrow = 1465, ncol = B)        # Preallocation
   
   for(i in 1:B){
     sample <- sample_n(train, 1465, replace = TRUE) # Sample from sample
@@ -181,6 +189,7 @@ print(models_rmse[1, 5] <- parallel)
 stopCluster(cl)
 
 #### Feature Bagging ####
+
 f_bag <- function(B, train, test){
   y_hat <- matrix(NA, nrow = 1465, ncol = B) # Preallocation  
   covariates <- train %>%
@@ -225,7 +234,7 @@ cv_rid <- cv.glmnet(x, y, alpha = 0)
 mod_step <- step(lm(SalePrice ~ ., data = train), trace = FALSE)
 
 
-for(i in 1:n){
+for(i in 1:5){
   tr <- train[-i, ]
   te <- train[i, ]
   x_tr <- model.matrix(SalePrice ~ ., tr)           # Preparing the training set
@@ -251,9 +260,9 @@ options(warn = -1)
 test_lm <- matrix(predict(lm(SalePrice ~ ., data = train), test), ncol = 1)
 test_step <- matrix(predict(mod_step, test), ncol = 1)
 test_lass <- matrix(predict(glmnet(x_tr, y_tr, alpha = 1), x_test, s = cv_las$lambda.min, 
-                     type = "response"), ncol = 1)
+                            type = "response"), ncol = 1)
 test_rid <- matrix(predict(glmnet(x_tr, y_tr, alpha = 1), x_test, s = cv_rid$lambda.min, 
-                    type = "response"), ncol = 1)
+                           type = "response"), ncol = 1)
 options(warn = 1)
 
 intercept <- matrix(1, nrow = 1465)
@@ -295,8 +304,8 @@ write.csv(rmse_final, "rmse_final.csv")                              # Exporting
 rmse_final$names <- factor(rmse_final$names, 
                            levels = rmse_final$names[order(rmse_final$RMSE)])
 ggplot(rmse_final, aes(x = RMSE, y = names)) +
-  geom_point(aes(size = 3, color = factor(X))) +
-  geom_errorbarh(aes(xmax = upper, xmin = lower, color = factor(X)),
+  geom_point(aes(size = 3, color = factor(names))) +
+  geom_errorbarh(aes(xmax = upper, xmin = lower, color = factor(names)),
                  height = 0.4) +
   theme_classic() + 
   scale_color_discrete(labels = c("Ridge", "Stacking", "LASSO",
@@ -311,3 +320,4 @@ ggplot(rmse_final, aes(x = RMSE, y = names)) +
   guides(size = FALSE,
          colour = guide_legend(reverse=T)) +
   theme(panel.grid.major.x = element_line(color = "gray90"))
+
