@@ -11,7 +11,7 @@
 
 \author{Valentin Zulj \&  Vilgot \"{O}sterlund}
 \title{Solutions to Assignment 2}
-\date{Deadline day, 2018}
+\date{October 17, 2018}
 
 \begin{document}
 <<include = FALSE>>=
@@ -255,6 +255,7 @@ test <- as.tibble(house  %>%
 models_rmse <- data.frame("lr_all" = NA, "lr_step" = NA, "ridge" = NA, "LASSO" = NA, 
     "bagging" = NA, "feature_bagging" = NA, "stacking" = NA)
 @
+
 \subsection{OLS Regression}
 The first model is a linear regression model with all 20 variables included. The RMSE for this model is 35 667.
 
@@ -305,7 +306,7 @@ print(models_rmse[1, 3] <-
 
 \subsubsection{LASSO}
 
-he next model is LASSO, which is similar to ridge regression but with the difference that it can impel the coefficients to be zero. The value of lambda is found by the same procedure as in ridge regression. The RMSE of the LASSO model is 35 127, which puts it on second place when it comes to prediction accuracy.
+The next model is LASSO, which is similar to ridge regression but with the difference that it can impel the coefficients to be zero. The value of lambda is found by the same procedure as in ridge regression. The RMSE of the LASSO model is 35 127, which puts it on second place when it comes to prediction accuracy.
 
 <<>>=
 set.seed(1)
@@ -317,9 +318,10 @@ lasso <- (ytest - lasso_pred)^2           # Squared error
 print(models_rmse[1, 4] <- 
   sqrt(mean(lasso)))                      # RMSE for LASSO
 @
+
 \subsection{Ensemble Methods}
 \subsubsection{Bagging} \label{sec:bag}
-Bagging is a method for bootstrap aggregation which is based on fitting specially selected models to different bootstrap samples in order to predict the same response variable a large number of times. Doing so allows us use the mean of these predictions as a final estimate of the response. This section will aim to write a function that performs bagging, and apply it to the data on house prices.
+Bagging is a method for bootstrap aggregation which is based on fitting specially selected models to different bootstrap samples in order to predict the same response variable a large number of times. Doing so allows us to use the mean of these predictions as a final estimate of the response. This section will aim to write a function that performs bagging, and apply it to the data on house prices.
 
 Clearly, the repetitive block of the function will need to involve a loop, and so, we need to create a matrix for the output of the loop. If \texttt{B} is the arbitrary amount of times we want to run our loops, and the size of each bootstrap sample is 1465, the matrix will be generated as follows:
 
@@ -363,8 +365,8 @@ bag <- function(B, train, test){
     y_hat[, i] <- test           %>%
       add_predictions(mod_step)  %>% 
       pull(pred)                                    # Predictions
-    options(warn = 1)
-  }
+    options(warn = 1)}
+  
    y <- test %>%
      pull(SalePrice)                                # Response
    hat <- rowMeans(y_hat)                           # Means of predictions
@@ -372,7 +374,7 @@ bag <- function(B, train, test){
    return(rmse)}
 @
 
-\noindent The computational burden of \texttt{bag} is rather heavy, and evaluating it using any meaningful value of \texttt{B} would be incredibly time consuming. Because of this, we turn to parallel computing in order to save time in running the function. To do this, we use the following code:
+\noindent The computational burden of \texttt{bag} is rather heavy, and evaluating it using any meaningful value of \texttt{B} would be incredibly time consuming. Because of this, we turn to parallel computing in order to save time in running the function. To do this, we use the following code, rendering an RMSE value of 35 682:
 
 <<eval = FALSE >>=
 cl <- makeCluster(4)                               # Setting up workers
@@ -384,7 +386,7 @@ clusterExport(cl, varlist = c("train", "test"))    # Variables to workers
 parallel <- parSapply(cl, rep(250,4), FUN = bag, 
                       train = train, test = test)  # Parallel computing
 parallel <- mean(parallel)                         # Final value
-parallel
+print(models_rmse[1, 5] <- parallel)
 stopCluster(cl)                                    # Stopping workers
 @
 
@@ -393,14 +395,14 @@ stopCluster(cl)                                    # Stopping workers
 Since the result of the ordinary bagging model is not that impressive, we will seek to try one more version of aggregate bootstrapping. In Section \ref{sec:fbag}, we will take a closer look at feature bagging.
 
 \subsubsection{Feature Bagging} \label{sec:fbag}
-Feature bagging is rather similary to the 'ordinary' bagging process discussed above. However, in feature bagging, we draw a random sample of from the list of regressors and use them as covariates when estimating our model. Assuming we have a covariate matrix of dimensions $n \times p$, $p$ will be the number of covariates -- excluding the intercept. In feature bagging, it is common practice to draw a sample of $\sqrt{p}$ covariates for each bootstrap sample used.
+Feature bagging is rather similar to the 'ordinary' bagging process discussed above. However, in feature bagging, we draw a random sample from the list of regressors and use them as covariates when estimating our model. Assuming we have a covariate matrix of dimensions $n \times p$, $p$ will be the number of covariates -- excluding the intercept. In feature bagging, it is common practice to draw a sample of $\sqrt{p}$ covariates for each bootstrap sample used.
 
 Following from last section, we start by setting up varaibles to use in the loop. We use the same \texttt{B} as in Section \ref{sec:bag}:
 
 <<eval = FALSE>>=
 y_hat <- matrix(NA, nrow = 1465, ncol = B)  # Preallocation  
   covariates <- train            %>%
-    select(SalePrice) %>%
+    select(SalePrice)            %>%
     colnames()                              # Covariates to sample from
   dep <- train                   %>%                   
     select(SalePrice)            %>%
@@ -458,15 +460,16 @@ feature_bag <- function(B, train, test){
   return(rmse)}
 @
 
-\noindent Evaluating the \texttt{feature\_bag} using 5000 bootstrap samples yields the following RMSE:
+\noindent Evaluating the \texttt{feature\_bag} using 5000 bootstrap samples yields an RMSE of 37 599, as shown in Figure \ref{fig:rmse}:
 
 <<eval = FALSE>>=
-feature_bag(5000, train, test) 
+models_rmse[1, 6] <- f_bag(5000, train, test) 
 @
 
 \subsubsection{Stacking} \label{sec:stack}
-Last up, we have stacking, which can be seen as a multi stage rocket for prediction. In the first stage, we use leave one out cross validation (LOOCV) to predict the prices in the training set. This yields four predictions for each observation. In the next stage, we regress the true values on the predicted values. This gives us a linear model, here called \texttt{stacking\_pred\_mod}. Now we use the models achieved earlier (\texttt{lr\_all, lr\_step, ridge} and \texttt{LASSO}) to predict the sale prices in the training set. Again, this gives us four predictions for each observation. In the last stage, we use the theese values to predict the sale prices with the linear model \texttt{stacking\_pred\_mod}. Surprisingly, this turned out to be the worst model for predicting the sale prices in the test set, with a RMSE of 34 783.
-We begin by setting up variables to be used in stacking:
+Last up, we have stacking, which can be seen as a multi stage rocket for prediction. In the first stage, we use leave one out cross validation (LOOCV) to predict the prices in the training set. This yields four predictions for each observation. In the next stage, we regress the true values on the predicted values. This gives us a linear model, here called \texttt{reg\_y}. Now we use the models designed earlier to predict the sale prices in the test set. Again, this gives us four predictions for each observation. In the last stage, we use the theese values to predict the sale prices with the linear model \texttt{reg\_y}. This turned out to be the best model for predicting the sale prices in the test set, with a RMSE of 34 783.
+
+\noindent We begin by setting up variables to be used in stacking:
 
 
 <<eval = FALSE>>=
@@ -484,6 +487,7 @@ mod_step <-
 @
 
 \noindent Then, we construct a loop that estimates the response variable of the test set using the four different model types and LOOCV:
+
 <<eval = FALSE>>=
 for(i in 1:n){
   tr <- train[-i, ]                       # LOOCV
@@ -543,7 +547,7 @@ predictions <- cbind(intercept, test_lm, test_lass,
 stack_pred <- predictions %*% b          # Multiplying with coeffs
 @
 
-\noindent Finally, we copute the root mean square error:
+\noindent Finally, we compute the root mean square error:
 
 <<eval = FALSE>>=
 y_test <- test %>%                       # Extracting response
@@ -558,7 +562,6 @@ stack <- stack %>%
   summarize(RMSE = 
       sqrt(mean(dev_square)))            # RMSE
 print(models_rmse[1, 7] <- stack)
-
 @
 
 \subsection{Comparing Estimates of RMSE}
@@ -568,9 +571,9 @@ The final section of this report will give a comparison of how well the differen
 \left[ \sqrt{\frac{m}{\chi^{2}_{1-\alpha/2,m}}} RMSE, \; \sqrt{\frac{m}{\chi^{2}_{1-\alpha/2,m}}} RMSE \right],
 \end{align*}
 
-\noindent where $m = 1465$ and $\lambda = 0.05$.
+\noindent where $m = 1465$ and $\alpha = 0.05$.
 
-Now, in order to save tim not having to run the simulations throught \texttt{knitr}, we compute the intervals in our ordinary \texttt{R} session, save the intervals in a \texttt{.csv}, and load it into this environment to make the graph. We do this as follows:
+Now, in order to save time not having to run the simulations through \texttt{knitr}, we compute the intervals in our ordinary \texttt{R} session, save the intervals in a \texttt{.csv} file, and load it into this environment to make the graph. We do this as follows:
 
 <<eval = FALSE>>=
 rmse_final <- matrix(nrow = 7, ncol = 4)
