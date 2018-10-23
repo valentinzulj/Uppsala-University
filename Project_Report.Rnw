@@ -1,0 +1,113 @@
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage[a4paper, total={6.1in, 8.1in}]{geometry}
+\usepackage{amsmath}
+
+
+\begin{document}
+
+<<include = FALSE>>=
+library(tidyverse) 
+library(randomForest)
+library(xtable)
+library(modelr)
+library(gbm)
+library(rpart)
+
+data <-  as.tibble(read.csv("data_factors.csv"))
+data <- data %>%
+  select(-X) %>%
+  mutate(Cover_Type = factor(Cover_Type),
+         wild = factor(wild),
+         soil = factor(soil))                  # Conversion to factors
+
+s <- sample(1:nrow(data), nrow(data)/2, replace = FALSE)  # Sampling test set
+
+test <- data[s, ]   # Test set
+test <- test %>%
+  select(-Id)
+train <- data[-s, ] # Training set
+train <- train %>%
+  select(-Id)
+@
+\begin{titlepage}
+    \begin{center}
+
+        \includegraphics[scale=2.5]{logo.eps}
+
+
+        \vspace{0.5cm}
+        
+        {\Huge{\texttt{I(RandomForest\string^2)}}}\\
+        \vspace{0.35cm}
+        {\Large Random Forests Applied to Random Forests} 
+        
+        \vspace{0.5cm}
+        
+        \textbf{Snillgot \"{O}sterlund, Valentin Zulj \& Aqeel Baig} \\
+        
+         
+      \vspace{0.5cm}
+        
+     
+        
+        Department of Statistics\\
+        Uppsala University\\
+        November 9, 2018
+      
+    \end{center}
+\end{titlepage}
+
+\newpage
+\thispagestyle{empty}
+\noindent \textit{Trees are very easy to explain to people. In fact, they are even easier to explain than linear regression!}
+
+
+\pagebreak
+
+\newpage
+\begin{abstract}
+Hej Vilgot!
+
+
+\end{abstract}
+
+\newpage
+\renewcommand*\contentsname{Table of Contents}
+\tableofcontents
+\newpage
+
+\section{Introduction}
+In this project, we will aim to grow enough trees to compensate for the cutting down of the Amazon rainforrest.
+
+\section{Data}
+
+\section{Methods}
+This section will provide descriptions of the methods used in order to carry out this study. First, we will provide a brief discussion regarding decision trees, seeing as they make up the individual components of the random forests we want to grow. After that, we will delve deep into the world of random forests and gradient boosting models, in order to provide a deeper understanding of what goes on behind the algorithms of the \texttt{randomForest} package.
+
+\subsection{Decision Trees}
+Decision trees are a fairly simple way of classifying observations using cut-off points in order to divide the data set into groups. The cut-off points are usually called inner nodes, and they separate the data set into two new sets that do not overlap. Repeating this process for many variables will result in several inner nodes, and at the very end we will attain terminal nodes that decide which class each observation will belong to.
+
+Consider the \texttt{Elevation} variable in our data set. It is quite reasonable to assume that different trees grow at different altitudes, seeing as different species require differing amounts of oxygen and sunlight, and perhaps even different temperatures. Hence, if we try to build a classification tree, we could assume that 4 out of the 7 types of tree tend to grow at altitudes lower than 1500 metres, and that the remaining 3 groups are usually found somewhat higher than that. Then we will have an inner node at which the tree splits into two branches, on containing the lower altitude trees and the other the trees growin higher up. For each branch, we continue searching for variables by which to grow even more branches, and eventually end up with a tree classifying every single observation in our data set. The concept of decision trees is illustrated in Figure \ref{fig:tree}, where \texttt{Elevation} has been used to classify \texttt{Cover Type}.
+
+<<tree, echo = FALSE, fig.align = "center", fig.cap = "Classification tree for Cover Type. Elevation has been used as covariate", fig.height = 5.35>>=
+test_tree <- rpart(Cover_Type ~ Elevation, data = train)
+plot(test_tree, uniform=TRUE)
+text(test_tree, use.n=FALSE, all=TRUE, cex=.5)
+@
+
+In order to better understand the mathematics of classification trees, we need to introduce a measure of accuracy called the \textit{Gini index}. It can be thought of as a version of the residual sum of squares that is used when the response is a factor variable, and is defined as
+
+\begin{flalign}
+G = \sum \limits_{k=1}^{K} \hat{p}_{mk} \left(1-\hat{p}_{mk} \right),
+\end{flalign}
+
+\noindent where
+
+\subsection{Random Forests}
+
+\subsection{Gradient Boosting Models}
+
+
+
+\end{document}
