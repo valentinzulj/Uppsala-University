@@ -1,7 +1,23 @@
 \documentclass{article}
 \usepackage{graphicx}
-\usepackage[a4paper, total={6.1in, 8.1in}]{geometry}
+\usepackage[a4paper, total={5.5in, 8.1in}]{geometry}
 \usepackage{amsmath}
+
+
+
+\newenvironment{dedication}
+{
+   \cleardoublepage
+   \thispagestyle{empty}
+   \vspace*{\stretch{1}}
+   \hfill\begin{minipage}[t]{0.66\textwidth}
+   \raggedright
+}%
+{
+   \end{minipage}
+   \vspace*{\stretch{3}}
+   \clearpage
+}
 
 
 \begin{document}
@@ -13,6 +29,7 @@ library(xtable)
 library(modelr)
 library(gbm)
 library(rpart)
+
 
 data <-  as.tibble(read.csv("data_factors.csv"))
 data <- data %>%
@@ -30,6 +47,7 @@ train <- data[-s, ] # Training set
 train <- train %>%
   select(-Id)
 @
+
 \begin{titlepage}
     \begin{center}
 
@@ -44,7 +62,7 @@ train <- train %>%
         
         \vspace{0.5cm}
         
-        \textbf{Snillgot \"{O}sterlund, Valentin Zulj \& Aqeel Baig} \\
+        \textbf{\large{Snillgot \"{O}sterlund, Valentin Zulj}} \\
         
          
       \vspace{0.5cm}
@@ -58,12 +76,12 @@ train <- train %>%
     \end{center}
 \end{titlepage}
 
-\newpage
-\thispagestyle{empty}
-\noindent \textit{Trees are very easy to explain to people. In fact, they are even easier to explain than linear regression!}
+\begin{dedication}
+\textit{Trees are very easy to explain to people. In fact, they are even easier to explain than linear regression!}
 
+\hspace{1.5cm} \textit{-- G. James, D. Witten, T. Hastie \& R. Tibshirani}
+\end{dedication}
 
-\pagebreak
 
 \newpage
 \begin{abstract}
@@ -90,10 +108,10 @@ Decision trees are a fairly simple way of classifying observations using cut-off
 
 Consider the \texttt{Elevation} variable in our data set. It is quite reasonable to assume that different trees grow at different altitudes, seeing as different species require differing amounts of oxygen and sunlight, and perhaps even different temperatures. Hence, if we try to build a classification tree, we could assume that 4 out of the 7 types of tree tend to grow at altitudes lower than 1500 metres, and that the remaining 3 groups are usually found somewhat higher than that. Then we will have an inner node at which the tree splits into two branches, on containing the lower altitude trees and the other the trees growin higher up. For each branch, we continue searching for variables by which to grow even more branches, and eventually end up with a tree classifying every single observation in our data set. The concept of decision trees is illustrated in Figure \ref{fig:tree}, where \texttt{Elevation} has been used to classify \texttt{Cover Type}.
 
-<<tree, echo = FALSE, fig.align = "center", fig.cap = "Classification tree for Cover Type. Elevation has been used as covariate", fig.height = 5.35>>=
+<<tree, echo = FALSE, fig.align = "center", fig.cap = "Classification tree for Cover Type, using elevation as a covariate", fig.height = 5.35>>=
 test_tree <- rpart(Cover_Type ~ Elevation, data = train)
-plot(test_tree, uniform=TRUE)
-text(test_tree, use.n=FALSE, all=TRUE, cex=.5)
+#plot(test_tree, uniform=TRUE)
+#text(test_tree, use.n=FALSE, all=TRUE, cex=.5)
 @
 
 In order to better understand the mathematics of classification trees, we need to introduce a measure of accuracy called the \textit{Gini index}. It can be thought of as a version of the residual sum of squares that is used when the response is a factor variable, and is defined as
@@ -102,11 +120,42 @@ In order to better understand the mathematics of classification trees, we need t
 G = \sum \limits_{k=1}^{K} \hat{p}_{mk} \left(1-\hat{p}_{mk} \right),
 \end{flalign}
 
-\noindent where
+\noindent where $\hat{p}_{mk}$ is the proportion of training observations of class $k$ in the $m$:th branch. The Gini index is a measure of variance across the $K$ number classes, and hence we want to choose the cut-off values of each branch in a way that minimizes the Gini index. There are several other types of variance measures that can be used to fit classification trees, such as \textit{classification error rate} and \textit{entropy}. However, the classification error rate is too robust for growing a meaningful tree \cite{islr}. We find the the Gini index is more intuitive than the measure of entropy, and that the Gini index easier to understand, and hence choose to use it in our project. Classification trees grown according to the method described above are prone to overfitting, and using them on data other than the training set is bound to yield a very high variance. Hence, we introduce the concept of \textit{pruning}, which strives to simplify the trees and make them more generally applicable.
 
-\subsection{Random Forests}
+Pruning means that we use the training data to grow a tree of maximum depth -- or the maximum amount of splits -- and then work our way back to find the subtree that provides the best classification rate. Doing this, we reduce the risk of overfitting, and find the tree that gives us the greatest classification power. In short, we grow our trees accoring to the following plan:
 
-\subsection{Gradient Boosting Models}
+\begin{enumerate}
+\item Grow a tree -- call it $T_{0}$ --  using the training data and the maximum number of splits allowed
+\item Prune $T_{0}$ in order to find the subtree -- call it $T_{1}$ -- the produces the best classification rate
+\item Use $T_{1}$ to to classify the response variable of the test set
+\end{enumerate}
+
+Finally, we intend to grow a classification tree to compare its performance to those of the random forest and the gradient boosting model. In order to grow the simple decision trees, we use a package called \texttt{rpart} \cite{R-rpart}. Random forests and gradient boosting models will be described in Sections \ref{sec:forest} and \ref{sec:boosting} respectively.
+
+\subsection{Random Forests} \label{sec:forest}
+Random forests are a way of reducing variability in the estimates, as well as decorrelating trees grown using bootstrap samples drawn from the original training data. In essence, the theory of random forests is the same as that of decision trees, the only diffrence being that that a random forest consits of a multitude of individual decision trees -- as can be deduced from the name. In order to understand the workings of a random forest, we need to introduce bootstrap aggregation -- or bagging in short.
+
+Bagging entails drawing bootstrap samples from the training data and fitting a decision tree to them, using each tree to classify the response of the test set. This process is repeated $B$ times, and in the end, the class of each observation is decided by the most occuring class among the sample classifications. If $B = 5$, the classifications of a hypothetical observation could amount to $\{2, 2, 3, 2, 4\}$. Hence, the bagging procedure will list the observation as an element of class 2. The use of bagging tends to be somewhat problematic, seeing as all covariates are used in every tree. Thus, the trees run the risk of being highly correlated, and having an inflated variance. Because of this, a method of decorrelating the trees has been introduced. The method in question is called random forests, and it will be used in the analysis provided in this paper.
+
+In growing random forests, a random element is added to the bagging procedure. At each split of the tree, a sample of covariates is drawn. Using the covariates in the sample, the split is made using the variable which gives the greatest decrease in the Gini index. Usually, the number of covariates in each sample is kept in the vicinity of $\sqrt{p}$, where $p$ is the number of covariates available for selection [\textbf{ESL}]. As mentioned above, this randomization of covariates reduces the correlation between trees, meaning that pruning will not be very fruitful when using random forests. Hence, we do not spend any time controlling for pruning while growing our forests.
+
+In drawing the bootstrap samples, a part of the training data will clearly be left out each time, meaning that it can be used to validate each model. Letting each model classify the observations that are not in the sample, we obtain a classification rate that measures the usefulness of each model. This procedure is called out-of-bag (OOB) error estimation -- since the observations are litteraly out of the bag, and it can be used instead of the usual $k$-fold cross validation. Hence, we can measure the success of our forest in two ways, one being the OOB error rate, and the other the test classification rate.
+
+Finally, we will grow a random forest in order to try and classify the \texttt{Cover Type} of our plots of land, using the \texttt{randomForest} package \cite{R-randomForest}. Theoretically, the random forest should have a higher rate of success than the individual classification tree. Hence, we will compare the two of them, together with a gradient boosting model, which will be discussed in further detail in Section \ref{sec:boosting}. 
+
+\subsection{Gradient Boosting Models} \label{sec:boosting}
+
+\section{Implementation} \label{sec:implementation}
+
+\section{Results} \label{sec:results}
+
+\section{Conclusion} \label{sec:cocnlusion}
+
+
+
+\bibliographystyle{apalike}
+\bibliography{bibl}
+
 
 
 
