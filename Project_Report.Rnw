@@ -2,6 +2,8 @@
 \usepackage{graphicx}
 \usepackage[a4paper, total={5.5in, 8.1in}]{geometry}
 \usepackage{amsmath}
+\usepackage{multicol}
+\usepackage{fancyhdr}
 
 
 
@@ -48,6 +50,9 @@ train <- train %>%
   select(-Id)
 @
 
+\pagestyle{fancyplain}
+\rhead[]{}
+
 \begin{titlepage}
     \begin{center}
 
@@ -62,7 +67,7 @@ train <- train %>%
         
         \vspace{0.5cm}
         
-        \textbf{\large{Snillgot \"{O}sterlund, Valentin Zulj}} \\
+        \textbf{\large{Snillgot \"{O}sterlund \& Valentin Zulj}} \\
         
          
       \vspace{0.5cm}
@@ -71,7 +76,7 @@ train <- train %>%
         
         Department of Statistics\\
         Uppsala University\\
-        November 9, 2018
+        November 2018
       
     \end{center}
 \end{titlepage}
@@ -79,7 +84,7 @@ train <- train %>%
 \begin{dedication}
 \textit{Trees are very easy to explain to people. In fact, they are even easier to explain than linear regression!}
 
-\hspace{1.5cm} \textit{-- G. James, D. Witten, T. Hastie \& R. Tibshirani}
+\hspace{0.85cm} \textit{-- G. James, D. Witten, T. Hastie \& R. Tibshirani}
 \end{dedication}
 
 
@@ -137,13 +142,14 @@ Random forests are a way of reducing variability in the estimates, as well as de
 
 Bagging entails drawing bootstrap samples from the training data and fitting a decision tree to them, using each tree to classify the response of the test set. This process is repeated $B$ times, and in the end, the class of each observation is decided by the most occuring class among the sample classifications. If $B = 5$, the classifications of a hypothetical observation could amount to $\{2, 2, 3, 2, 4\}$. Hence, the bagging procedure will list the observation as an element of class 2. The use of bagging tends to be somewhat problematic, seeing as all covariates are used in every tree. Thus, the trees run the risk of being highly correlated, and having an inflated variance. Because of this, a method of decorrelating the trees has been introduced. The method in question is called random forests, and it will be used in the analysis provided in this paper.
 
-In growing random forests, a random element is added to the bagging procedure. At each split of the tree, a sample of covariates is drawn. Using the covariates in the sample, the split is made using the variable which gives the greatest decrease in the Gini index. Usually, the number of covariates in each sample is kept in the vicinity of $\sqrt{p}$, where $p$ is the number of covariates available for selection [\textbf{ESL}]. As mentioned above, this randomization of covariates reduces the correlation between trees, meaning that pruning will not be very fruitful when using random forests. Hence, we do not spend any time controlling for pruning while growing our forests.
+In growing random forests, a random element is added to the bagging procedure. At each split of the tree, a sample of covariates is drawn. Using the covariates in the sample, the split is made using the variable which gives the greatest decrease in the Gini index. Usually, the number of covariates in each sample is kept in the vicinity of $\sqrt{p}$, where $p$ is the number of covariates available for selection \cite{emsl}. As mentioned above, this randomization of covariates reduces the correlation between trees, meaning that pruning will not be very fruitful when using random forests. Hence, we do not spend any time controlling for pruning while growing our forests.
 
-In drawing the bootstrap samples, a part of the training data will clearly be left out each time, meaning that it can be used to validate each model. Letting each model classify the observations that are not in the sample, we obtain a classification rate that measures the usefulness of each model. This procedure is called out-of-bag (OOB) error estimation -- since the observations are litteraly out of the bag, and it can be used instead of the usual $k$-fold cross validation. Hence, we can measure the success of our forest in two ways, one being the OOB error rate, and the other the test classification rate.
+In drawing the bootstrap samples, a part of the training data will clearly be left out each time, meaning that it can be used to validate each model. Letting each model classify the observations that are not in the sample, we obtain a classification rate that measures the usefulness of each model. This procedure is called out-of-bag (OOB) error estimation -- since the observations are literally out of the bag, and it can be used instead of the usual $k$-fold cross validation. Hence, we can measure the success of our forest in two ways, one being the OOB error rate, and the other the test classification rate.
 
 Finally, we will grow a random forest in order to try and classify the \texttt{Cover Type} of our plots of land, using the \texttt{randomForest} package \cite{R-randomForest}. Theoretically, the random forest should have a higher rate of success than the individual classification tree. Hence, we will compare the two of them, together with a gradient boosting model, which will be discussed in further detail in Section \ref{sec:boosting}. 
 
 \subsection{Gradient Boosting Models} \label{sec:boosting}
+\cite{R-gbm}
 
 \section{Implementation} \label{sec:implementation}
 
@@ -151,10 +157,19 @@ Finally, we will grow a random forest in order to try and classify the \texttt{C
 
 \section{Conclusion} \label{sec:cocnlusion}
 
-
-
+\newpage
+\section*{References}
+\addcontentsline{toc}{section}{References}
+\begin{multicols}{2}
+     \small
+     \renewcommand{\refname}{ \vspace{-\baselineskip}\vspace{-1.1mm} }
+\setlength{\columnseprule}{0.01pt}
 \bibliographystyle{apalike}
 \bibliography{bibl}
+%\nocite{yam, zk, pakj, coleman, barro1, dinesen, jones, sol} 
+\end{multicols}
+
+
 
 
 
