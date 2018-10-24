@@ -4,6 +4,7 @@
 \usepackage{amsmath}
 \usepackage{multicol}
 \usepackage{fancyhdr}
+\usepackage{bm}
 
 
 
@@ -48,6 +49,25 @@ test <- test %>%
 train <- data[-s, ] # Training set
 train <- train %>%
   select(-Id)
+
+theme_forest <- theme_classic(base_family = "Optima") +       # Changes font
+  theme(panel.background = element_rect(fill = "gray96"),     # Panel colour
+        plot.background = element_rect(fill = "gray96"),      # Plot colour
+        plot.title = element_text(face = "bold",              
+                                  hjust = 0.5, size = 15),    # Centers title
+        plot.subtitle = element_text(colour = "gray35", 
+                                     hjust = 0.5, size = 10), # Centers subtitle
+        axis.text.x = element_text(face="bold"),              
+        axis.text.y = element_text(face="bold"),
+        panel.grid.minor = element_blank(),                   # Removes minor grid
+        panel.grid.major = element_line(colour = "gray87"),   # Major grid colour
+        axis.ticks.x = element_blank(),                       # Removes x ticks
+        axis.ticks.y = element_blank(),                       # Removes y ticks
+        axis.line.x.bottom = element_line(colour = "gray60"), # Colour of x axis
+        axis.line.y.left = element_line(colour = "gray60"),   # Colour of y axis
+        legend.background = element_rect(fill = "gray96",     # Background of legend
+                                         colour = NA)
+  )
 @
 
 \pagestyle{fancyplain}
@@ -106,17 +126,17 @@ In this project, we will aim to grow enough trees to compensate for the cutting 
 \section{Data}
 
 \section{Methods}
-This section will provide descriptions of the methods used in order to carry out this study. First, we will provide a brief discussion regarding decision trees, seeing as they make up the individual components of the random forests we want to grow. After that, we will delve deep into the world of random forests and gradient boosting models, in order to provide a deeper understanding of what goes on behind the algorithms of the \texttt{randomForest} package.
+This section will provide descriptions of the methods used in order to carry out this study. First, we will provide a brief discussion regarding decision trees, seeing as they make up the individual components of the random forests we want to grow. After that, we will delve deep into the world of random forests, in order to provide a deeper understanding of what goes on behind the algorithms of the \texttt{randomForest} package.
 
 \subsection{Decision Trees}
 Decision trees are a fairly simple way of classifying observations using cut-off points in order to divide the data set into groups. The cut-off points are usually called inner nodes, and they separate the data set into two new sets that do not overlap. Repeating this process for many variables will result in several inner nodes, and at the very end we will attain terminal nodes that decide which class each observation will belong to.
 
 Consider the \texttt{Elevation} variable in our data set. It is quite reasonable to assume that different trees grow at different altitudes, seeing as different species require differing amounts of oxygen and sunlight, and perhaps even different temperatures. Hence, if we try to build a classification tree, we could assume that 4 out of the 7 types of tree tend to grow at altitudes lower than 1500 metres, and that the remaining 3 groups are usually found somewhat higher than that. Then we will have an inner node at which the tree splits into two branches, on containing the lower altitude trees and the other the trees growin higher up. For each branch, we continue searching for variables by which to grow even more branches, and eventually end up with a tree classifying every single observation in our data set. The concept of decision trees is illustrated in Figure \ref{fig:tree}, where \texttt{Elevation} has been used to classify \texttt{Cover Type}.
 
-<<tree, echo = FALSE, fig.align = "center", fig.cap = "Classification tree for Cover Type, using elevation as a covariate", fig.height = 5.35>>=
+<<"tree", echo = FALSE, fig.align = "center", fig.cap = "Classification tree for Cover Type, using elevation as a covariate", fig.height = 5.35>>=
 test_tree <- rpart(Cover_Type ~ Elevation, data = train)
-#plot(test_tree, uniform=TRUE)
-#text(test_tree, use.n=FALSE, all=TRUE, cex=.5)
+plot(test_tree, uniform=TRUE)
+text(test_tree, use.n=FALSE, all=TRUE, cex=.5)
 @
 
 In order to better understand the mathematics of classification trees, we need to introduce a measure of accuracy called the \textit{Gini index}. It can be thought of as a version of the residual sum of squares that is used when the response is a factor variable, and is defined as
@@ -135,25 +155,49 @@ Pruning means that we use the training data to grow a tree of maximum depth -- o
 \item Use $T_{1}$ to to classify the response variable of the test set
 \end{enumerate}
 
-Finally, we intend to grow a classification tree to compare its performance to those of the random forest and the gradient boosting model. In order to grow the simple decision trees, we use a package called \texttt{rpart} \cite{R-rpart}. Random forests and gradient boosting models will be described in Sections \ref{sec:forest} and \ref{sec:boosting} respectively.
+Finally, we intend to grow a classification tree to compare its performance to that of the random forest model. In order to grow the simple decision trees, we use a package called \texttt{rpart} \cite{R-rpart}. Random forests models will be described in Section \ref{sec:forest}. 
 
 \subsection{Random Forests} \label{sec:forest}
 Random forests are a way of reducing variability in the estimates, as well as decorrelating trees grown using bootstrap samples drawn from the original training data. In essence, the theory of random forests is the same as that of decision trees, the only diffrence being that that a random forest consits of a multitude of individual decision trees -- as can be deduced from the name. In order to understand the workings of a random forest, we need to introduce bootstrap aggregation -- or bagging in short.
 
 Bagging entails drawing bootstrap samples from the training data and fitting a decision tree to them, using each tree to classify the response of the test set. This process is repeated $B$ times, and in the end, the class of each observation is decided by the most occuring class among the sample classifications. If $B = 5$, the classifications of a hypothetical observation could amount to $\{2, 2, 3, 2, 4\}$. Hence, the bagging procedure will list the observation as an element of class 2. The use of bagging tends to be somewhat problematic, seeing as all covariates are used in every tree. Thus, the trees run the risk of being highly correlated, and having an inflated variance. Because of this, a method of decorrelating the trees has been introduced. The method in question is called random forests, and it will be used in the analysis provided in this paper.
 
-In growing random forests, a random element is added to the bagging procedure. At each split of the tree, a sample of covariates is drawn. Using the covariates in the sample, the split is made using the variable which gives the greatest decrease in the Gini index. Usually, the number of covariates in each sample is kept in the vicinity of $\sqrt{p}$, where $p$ is the number of covariates available for selection \cite{emsl}. As mentioned above, this randomization of covariates reduces the correlation between trees, meaning that pruning will not be very fruitful when using random forests. Hence, we do not spend any time controlling for pruning while growing our forests.
+In growing random forests, a random element is added to the bagging procedure. At each split of the tree, a sample of covariates is drawn. Using the covariates in the sample, the split is made using the variable which gives the greatest decrease in the Gini index. Usually, the number of covariates in each sample is kept in the vicinity of $\sqrt{p}$, where $p$ is the number of covariates available for selection \cite{emsl}. As mentioned above, this randomization of covariates reduces the correlation between trees, meaning that pruning will not be very fruitful when using random forests. Hence, we do not spend any time controlling for pruning while growing our forests. As a result of this, the only real tuning parameter of the random forest model is the depth of the trees used.
 
 In drawing the bootstrap samples, a part of the training data will clearly be left out each time, meaning that it can be used to validate each model. Letting each model classify the observations that are not in the sample, we obtain a classification rate that measures the usefulness of each model. This procedure is called out-of-bag (OOB) error estimation -- since the observations are literally out of the bag, and it can be used instead of the usual $k$-fold cross validation. Hence, we can measure the success of our forest in two ways, one being the OOB error rate, and the other the test classification rate.
 
-Finally, we will grow a random forest in order to try and classify the \texttt{Cover Type} of our plots of land, using the \texttt{randomForest} package \cite{R-randomForest}. Theoretically, the random forest should have a higher rate of success than the individual classification tree. Hence, we will compare the two of them, together with a gradient boosting model, which will be discussed in further detail in Section \ref{sec:boosting}. 
+Finally, we will grow a random forest in order to try and classify the \texttt{Cover Type} of our plots of land, using the \texttt{randomForest} package \cite{R-randomForest}. Theoretically, the random forest should have a higher rate of success than the individual classification tree. Hence, we will library(knitr)compare the two of them, together with a multinomial logistic regression model, which is discussed further in Section \ref{sec:multinomial}.
 
-\subsection{Gradient Boosting Models} \label{sec:boosting}
-\cite{R-gbm}
+\subsection{Multinomial Logistic Regression} \label{sec:multinomial}
+The binomial logistic regression model is often used for classifying response variables that are factors with two levels. As stated above, however, our response variable has several levels -- 7 to be precise -- and thus we need to use a multinomial logistic regression model in order to try and classify the cover types. Seeing as the mathematics of the multinomial models are quite complicated, we will only provide the briefest of summaries in this section.
+
+The model we will used is often referred to as the \textit{multinomial logit model}, and in order to define it properly, we need to take a closer look at the notation used. As mentioned, our response variable is a factor of several levels, and that number of levels will be denoted by $c$ from now on. Furthermore,$\pi_{ij}$ denotes the probability of response in category $j$ by the $i$:th observation, meaning that $\sum_{j=1}^{c} = 1$.
+
+The model itself compares the different classes of response to a baseline category called $c$. Hence, the baseline-category \textit{logit} is defined as
+
+\begin{align*}
+\log \left(\frac{\pi_{ij}}{\pi_{ic}}\right).
+\end{align*}
+
+\noindent Seeing as we use a baseline class, we will only have $c-1$ logit terms. 
+
+Now, if we define $\bm{x_{i}} = (x_{i1}, ..., x_{ip}$ as the covariates, and $\bm{\beta_{j}}= \left(\beta_{j1}, ..., \beta_{jp} \right)\top$ as the parameters for the $j$:th logit, the model is given by
+
+\begin{align}
+\log \left(\frac{\pi_{ij}}{\pi_{ic}}\right)=\bm{x_{i}}\bm{\beta_{j}} = \sum \limits_{k=1}^{p}  \beta_{jk}  x_{ik}.
+\end{align}
+
+\noindent Giving us the baseline category logit model \cite{glm}. The parameters of the multinomial logit model are estimated is the maximum likelihood method, but the derivation of the estimators is left out of this report. However, we use the \textttt{multinom} function in the \texttt{nnet} package to implement it \cite{R-nnet}.
+
+That concludes the methodological section of this paper. Moving on, we will use the three methods we have described to classify the cover types of each plot of land. The results of these classifications will be presented in Section \ref{sec:results}.
+
 
 \section{Implementation} \label{sec:implementation}
 
 \section{Results} \label{sec:results}
+
+
+
 
 \section{Conclusion} \label{sec:cocnlusion}
 
