@@ -5,8 +5,9 @@ library(modelr)
 library(gbm)
 library(knitr)
 library(nnet)
+library(party)
 
-write_bib("nnet", file = "pack.bib")
+write_bib(c("party", "nnet"), file = "pack.bib")
 
 #### Theme ####
 theme_forest <- theme_classic(base_family = "Optima") +       # Changes font
@@ -55,30 +56,28 @@ test <- test %>%
 
 #### Models ####
 
-elev_solo <- randomForest(Cover_Type ~ Elevation, data = train)  # Using only elevation
+tree <- ctree(Cover_Type ~ ., data = train)
 
+mult <- multinom(Cover_Type ~ ., data = train)
 
-r_mod_all <- randomForest(Cover_Type ~ ., data = train, 
-                          mtry = round(sqrt(ncol(train)-1)),
-                          importance = TRUE)  # Using all covariates
+elev_soil <- randomForest(Cover_Type ~ Elevation + soil, data = train,
+                          maxnodes = 2500)  # Using only elevation
+elev_soil$confusion                         # Confusion table
 
-r_mod_imp <- randomForest(Cover_Type ~ Elevation + soil + h_road + h_fire, 
-                          data = train, mtry = 2, importance = TRUE) # The most important
+r_mod_all <- randomForest(Cover_Type ~ ., data = train,
+                          importance = TRUE, maxnodes = 2500)  # Using all covariates
+r_mod_all$confusion                         # Confusion table
 
-boost_mod <- gbm(Cover_Type ~ ., distribution = "multinomial",       # Boost model
-                 data = train, n.trees = 1000, shrinkage = 0.35, n.cores = 2)
-
-mult_mod <- multinom()
 
 
 #### Tuning ####
-nodes <- round(seq(1000, 10000,length.out = 5))
+nodes <- round(seq(100, 10000,length.out = 15))
 n <- length(nodes)
 rates <- numeric(n)
 
-for (i in 1:n){
+for (i in 1:n){ # Testing the effect of maxnodes
   mod <- randomForest(Cover_Type ~ ., data = train, 
-                      maxnodes = )
+                      maxnodes = nodes[i])
   elv <- test %>%
     add_predictions(mod) %>%
     mutate(hit = ifelse(Cover_Type == pred, TRUE, FALSE)) %>%
@@ -91,44 +90,91 @@ for (i in 1:n){
 
 plot(rates)
 
+tune <- tibble(allowed = nodes,
+               maxnodes = rates)
+
+tune %>%
+  ggplot(mapping = aes(x = allowed, y = maxnodes)) +
+  geom_point()
+
+
+trees <- round(seq(100, 10000,length.out = 15))
+k <- length(trees)
+rate <- numeric(n)
+
+for (i in 1:k){ # Testing the effect of maxnodes
+  mod <- randomForest(Cover_Type ~ ., data = train, 
+                      ntree = trees[i], maxnodes = 2500)
+  elv <- test %>%
+    add_predictions(mod) %>%
+    mutate(hit = ifelse(Cover_Type == pred, TRUE, FALSE)) %>%
+    summarize(hit_rate = mean(hit)) %>%
+    pull(hit_rate)
+  rate[i] <- elv                        
+  print(i)
+  
+}
+
+tune <- tibble(allowed = nodes,
+               maxnodes = rates,
+               trees = rate)
+tune <- read.csv("tune.csv")
+
+tune %>%
+  ggplot() +
+  geom_line(mapping = aes(x = allowed, y = maxnodes, col = "No. of Nodes")) +
+  geom_line(mapping = aes(x = allowed, y = trees, col = "No. of Trees")) +
+  labs(y = "Classification Rate (%)",
+       x = "Number Allowed") +
+  scale_y_continuous(breaks = c(0.75, 0.775, 0.8, 0.825, 0.850),
+                     labels = c("75", "77.5", "80", "82.5", "85")) +
+  scale_x_continuous(breaks = c(100, 2500, 5000, 7500, 10000),
+                     labels = c("100", "2500", "5000", "7500", "10000")) +
+  guides(color = guide_legend((title = NULL))) +
+  theme_classic()
+  
 
 #### Hit Rates ####
 
-elv_class <- test %>%
-  add_predictions(elev_solo) %>%
+tree_class <- test %>%
+  add_predictions(tree) %>%
   mutate(hit = ifelse(Cover_Type == pred, TRUE, FALSE)) %>%
-  summarize(hit_rate = mean(hit))
+  select(Cover_Type, pred, hit) %>%
+  summarize(hit_rate = mean(hit)) %>%
+  pull(hit_rate)
+tree_class
+
+a <- table(test$Cover_Type, predict(tree, test))
+b <- round((rowSums(a) - diag(a))/rowSums(a), digits = 3)
+tree_conf <- cbind(a,b) # Confusion table
+
+mult_class <- test %>%
+  add_predictions(mult) %>%
+  mutate(hit = ifelse(Cover_Type == pred, TRUE, FALSE)) %>%
+  select(Cover_Type, pred, hit) %>%
+  summarize(hit_rate = mean(hit)) %>%
+  pull(hit_rate)
+mult_class
+
+a_mult <- table(test$Cover_Type, predict(mult, test))
+b_mult <- round((rowSums(a_mult) - diag(a_mult))/rowSums(a_mult), digits = 3)
+mult_conf <- cbind(a_mult,b_mult) # Confusion table
+
+
+elv_class <- test %>%
+  add_predictions(elev_soil) %>%
+  mutate(hit = ifelse(Cover_Type == pred, TRUE, FALSE)) %>%
+  summarize(hit_rate = mean(hit)) %>%
+  pull(hit_rate)
 elv_class                          # Hit rate using only elevation
 
 all_class <- test %>%
   add_predictions(r_mod_all) %>%
   mutate(hit = ifelse(Cover_Type == pred, TRUE, FALSE)) %>%
-  summarize(hit_rate = mean(hit))
+  summarize(hit_rate = mean(hit)) %>%
+  pull(hit_rate)
 all_class                          # Hit rate using all variables
 
-imp_class  <- test %>%
-  add_predictions(r_mod_imp) %>%
-  mutate(hit = ifelse(Cover_Type == pred, TRUE, FALSE)) %>%
-  summarize(hit_rate = mean(hit))
-imp_class                          # Hit rate using important variables
-
-boost_class <- predict.gbm(boost_mod, test, # Boost predictions
-                           type = 'response', n.trees = 1000)
-
-for(j in 1:ncol(boost_class)){
-  for(i in 1:nrow(boost_class)){
-    if(boost_class[i, j, ] == max(boost_class[i, , ])){
-      boost_class[i, j, ] = j
-    } else {
-      boost_class[i, j, ] <- 0
-    }
-  }
-}
-boost_class <- rowSums(boost_class)
-boost_class <- factor(boost_class)
-boost_class <- boost_class == test$Cover_Type
-mean(boost_class)
-summary(boost_class)
 
 
 #### Plots ####
