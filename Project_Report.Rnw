@@ -68,6 +68,7 @@ theme_forest <- theme_classic(base_family = "Optima") +       # Changes font
         legend.background = element_rect(fill = "gray96",     # Background of legend
                                          colour = NA)
   )
+tune <- read.csv("tune.csv")
 @
 
 \pagestyle{fancyplain}
@@ -123,7 +124,42 @@ Hej Vilgot!
 \section{Introduction}
 In this project, we will aim to grow enough trees to compensate for the cutting down of the Amazon rainforrest.
 
-\section{Data}
+\section{Data} \label{sec:data}
+
+<<elev_density, echo=FALSE, fig.width = 6.5, fig.asp = 0.62, fig.align = "center", fig.cap = "Density plot showing the occurence of different cover types at different elevations">>=
+ggplot(data, aes(x = Elevation, fill = Cover_Type)) +
+  geom_density(alpha = 0.8) +
+  labs(fill = "Cover Type") +
+  theme_classic()
+@
+
+<<elev_hillshade, echo=FALSE, fig.width = 6, fig.asp = 0.68, fig.align = "center", fig.cap = "Scatterplot showing the relationship between afternoon hillshade and elevation, as well as the horizontal distance to roads.">>=
+ggplot(data, aes(x = Hillshade_3pm, y = Elevation, color = Cover_Type, size = h_road)) +
+  geom_point() +
+  labs(color = "Cover Type",
+       size = "Horiz. Dist. to Roads",
+       x = "Afternoon Hillshade") +
+  theme_classic()
+
+@
+
+<<h_water_boxplot, echo=FALSE, fig.width = 5.5, fig.asp = 0.62, fig.align = "center", fig.cap = "Boxplot showing where different cover types occur in relation to the nearest source of water">>=
+ggplot(data, aes(x = Cover_Type, y = h_water, fill = Cover_Type)) +
+  geom_boxplot() +
+  labs(fill = "Cover Type",
+       x = "Cover Type",
+       y = "Horizontal Distance to Water") +
+  theme_classic()
+@
+
+<<soil_elev, echo=FALSE, fig.width = 8, fig.asp = 0.62, fig.cap = "Scatterplot of soil type and elevtion.">>=
+ggplot(data, aes(y = Elevation, x = soil, color = Cover_Type)) +
+  geom_point() +
+  labs(color = "Cover Type",
+       x = "Soil Type",
+       y = "Elevation") +
+  theme_classic()
+@
 
 \section{Methods}
 This section will provide descriptions of the methods used in order to carry out this study. First, we will provide a brief discussion regarding decision trees, seeing as they make up the individual components of the random forests we want to grow. After that, we will delve deep into the world of random forests, in order to provide a deeper understanding of what goes on behind the algorithms of the \texttt{randomForest} package.
@@ -155,7 +191,7 @@ Pruning means that we use the training data to grow a tree of maximum depth -- o
 \item Use $T_{1}$ to to classify the response variable of the test set
 \end{enumerate}
 
-Finally, we intend to grow a classification tree to compare its performance to that of the random forest model. In order to grow the simple decision trees, we use a package called \texttt{rpart} \cite{R-rpart}. Random forests models will be described in Section \ref{sec:forest}. 
+Finally, we intend to grow a classification tree to compare its performance to that of the random forest model. In order to grow the simple decision trees, we use a package called \texttt{party} \cite{R-party}. Random forests models will be described in Section \ref{sec:forest}. 
 
 \subsection{Random Forests} \label{sec:forest}
 Random forests are a way of reducing variability in the estimates, as well as decorrelating trees grown using bootstrap samples drawn from the original training data. In essence, the theory of random forests is the same as that of decision trees, the only diffrence being that that a random forest consits of a multitude of individual decision trees -- as can be deduced from the name. In order to understand the workings of a random forest, we need to introduce bootstrap aggregation -- or bagging in short.
@@ -187,19 +223,134 @@ Now, if we define $\bm{x_{i}} = (x_{i1}, ..., x_{ip}$ as the covariates, and $\b
 \log \left(\frac{\pi_{ij}}{\pi_{ic}}\right)=\bm{x_{i}}\bm{\beta_{j}} = \sum \limits_{k=1}^{p}  \beta_{jk}  x_{ik}.
 \end{align}
 
-\noindent Giving us the baseline category logit model \cite{glm}. The parameters of the multinomial logit model are estimated is the maximum likelihood method, but the derivation of the estimators is left out of this report. However, we use the \textttt{multinom} function in the \texttt{nnet} package to implement it \cite{R-nnet}.
+\noindent Giving us the baseline category logit model \cite{glm}. The parameters of the multinomial logit model are estimated is the maximum likelihood method, but the derivation of the estimators is left out of this report. However, we use the \texttt{multinom} function in the \texttt{nnet} package to implement it \cite{R-nnet}.
 
 That concludes the methodological section of this paper. Moving on, we will use the three methods we have described to classify the cover types of each plot of land. The results of these classifications will be presented in Section \ref{sec:results}.
 
 
 \section{Implementation} \label{sec:implementation}
+In this section we will discuss the implementation of the methods described above, and provide an overview of the simulation study we plan to perform in order to test the \texttt{randomForest} package out. When it comes to the single classification tree and the multinomial our comments will be rather shallow, but for the random forest we will explain the choices we made in applying the method to our data.
+
+\subsection{Classification Tree} \label{sec:tree}
+We choose not to spend too much time on the making of a classification tree, since we want to focus on the implementation of random forests. We use the \texttt{ctree} function to fit a tree using all the covariates in our training data, and use it to classify the cover types of the test data. Hence, we will not provide any description of the package, and we will proceed by using only the default settings of the tree growing function.
+
+Seeing as the tree is grown only to provide some sort of relation to the random forest, we find it reasonable to leave it at that.
+
+
+\subsection{Random Forest} \label{sec:for}
+As stated in section \ref{sec:forest}, the only real possibility of tuning the random forest model is modifying the depth, as well as the number of trees used in the forest. In order to find a final model to use for classification, we run a couple of loops that that make fit models and make predictions using different restrictions to the number of terminal nodes and the number of trees allowed. The loops themselves are fairly simple, and they will only be included in the \texttt{.R} appendix file of this report. Having evaluated the model for different values of the maximum amount of terminal nodes allowed, we conclude that the classification rate seems to converge to a value close to 85\% when \texttt{maxnodes} takes on values that exceed 2500. Hence, 2500 will be the value we use in our final model.
+
+Knowing that, we set \texttt{maxnodes} to 2500 and run the model allowing for different amounts of trees to be used in the forest. As can be seen in Figure \ref{fig:tune}, the classification rate does not seem to be affected by the number of trees, given the number of terminal nodes allowed. Hence, we use the default setting when it comes to \texttt{ntree}, which grows a forest of 500 trees. The \texttt{randomForest} function does not seem to contain a setting that controls the direct depth of the tree. Thus, we use \texttt{maxnodes} as a proxy.
+
+<<tune, echo = FALSE, warning = FALSE, fig.height = 4, fig.cap = "Effects of terminal nodes and number of trees on the classification rate">>=
+tune %>%
+  ggplot() +
+  geom_line(mapping = aes(x = allowed, y = maxnodes, col = "No. of Nodes")) +
+  geom_line(mapping = aes(x = allowed, y = trees, col = "No. of Trees")) +
+  labs(y = "Classification Rate (%)",
+       x = "Number Allowed") +
+  scale_y_continuous(breaks = c(0.75, 0.775, 0.8, 0.825, 0.850),
+                     labels = c("75", "77.5", "80", "82.5", "85")) +
+  scale_x_continuous(breaks = c(100, 2500, 5000, 7500, 10000),
+                     labels = c("100", "2500", "5000", "7500", "10000")) +
+  guides(color = guide_legend((title = NULL))) +
+  theme_classic()
+@
+
+For each of the separations, we let the function consider $\sqrt{p}$ covariates, and proceed using the one that gives the best classification rate. This decision is based mainly with reference to the literature, with both books using the same principle. The number of covariates to consider is determined by the \texttt{mtry} option of the package, and when growing a forest of classification trees it is set to $\sqrt{p}$ by default. Hence, we do no consider making any changes to it.
+
+In addition, we have the option to vary the size of the samples drawn in order to fit the forests, all through the option named \texttt{sampsize}. The option has different default settings depending on whether samples are made with replacement or not. Generally, a large sample will decrease the level of randomness, making the model more likely to overfit, while a smaller sample will be more random but lead to a model with greater variability. We choose to sample with replacement, using a sample size that corresponds to the number of observations found in the set of training data. This method is called bootstrapping, and is usually thought to set up a basis for balanced modelling. When sampling with replacement -- which is done by default -- the \texttt{sampsize} option is automatically set to \texttt{nrow(x)}, which gives the number of observations in the training set. Because of this, we let both \texttt{replace} and \texttt{sampsize} be set by default.
+
+\subsection{Multinomial Logit Model}
+As in Section \ref{sec:tree}, the logit model is only fitted in order to compare it with the random forest. Hence, we will only run it using default options, spending most of our time on tweaking the random forest model. The package we use to estimate the model, however, is fairly straightforward, and using the baseline multinomial logit model in its purest form does not allow for a great degree of tweaking to be performed. Thus, as is the case above, the model will be estimated by default in order to be used as a point of reference.
+
+\subsection{Simulation Study}
 
 \section{Results} \label{sec:results}
+\subsection{Classification Tree}
 
+We were quite surprised to see see the relatively high classification rate of the simple decision tree. The classification tree managed to correctly classify roughly 73.6\% of the test observations, using only the default settings of the \texttt{ctree} function. We present the confusion matrix of the model in Table \ref{tab:conf_tree}.
+
+\begin{table}[ht]\label{tab:conf_tree}
+\centering
+\begin{tabular}{c|ccccccc|c}
+  \hline
+  &   \multicolumn{7}{ c| }{\textbf{Actual Cover Types}} \\
+ \textbf{Predicted} & 1 & 2 & 3 & 4 & 5 & 6 & 7 & \textbf{Error Rate} \\ 
+  \hline
+  1 & 675 & 242 & 4 & 0 & 49 & 9 & 117 & 0.384 \\ 
+  2 & 198 & 597 & 29 & 0 & 180 & 50 & 10 & 0.439 \\ 
+  3 & 0 & 2 & 786 & 106 & 24 & 168 & 0 & 0.276 \\ 
+  4 & 0 & 0 & 61 & 972 & 0 & 39 & 0 & 0.093 \\ 
+  5 & 6 & 96 & 41 & 0 & 900 & 26 & 0 & 0.158 \\ 
+  6 & 0 & 21 & 287 & 73 & 30 & 643 & 0 & 0.390 \\ 
+  7 & 115 & 5 & 4 & 0 & 0 & 0 & 993 & 0.111 \\ 
+   \hline
+\end{tabular}
+\caption{Confusion table of single decision tree}
+\end{table}
+
+\noindent As is shown in the table, cover types 1 and 2 seem to be rather similar, and the model finds it difficult to distinguish between them. Perhaps this is not very surprising, seeing as the plots in Section \ref{sec:data} suggest that the two types of trees seem to grow at similar altidtudes, and also tend to keep the same horizontal distance to water. Furthermore, classes 3 and 6 look to be hard to predict. Looking at the table, the predictions of theses two classes in particular show greater variability that the rest. 
+
+Moving on, we will fit random forest models to the same data in order to see if we can generate better classification rates.
+
+
+\subsection{Random Forests}
+Looking at Figure \ref{fig:soil_elev}, we can see something that resembles clusters of different cover types. In the top right corner, for example, there are trees of type seven. Also, trees of type 3 seem to be concentrated at the lower left portion of the figure. In other words, it looks as if elevation and soil type capture a significant share of the variation in cover types. Hence, we will begin by growing a random forest that uses only soil and elevation as features. The bivariate random forest model manages to classify about 70\% of the test observations correctly, and the confusion matrix of the model is given in Table \ref{tab:conf_reduced}.
+
+
+\begin{table}[ht]\label{tab:conf_reduced}
+\centering
+\begin{tabular}{c|ccccccc|c}
+  \hline
+  &   \multicolumn{7}{ c| }{\textbf{Actual Cover Types}} \\
+ \textbf{Predicted} & 1 & 2 & 3 & 4 & 5 & 6 & 7 & \textbf{Error Rate} \\ 
+  \hline
+  1 & 677 & 202 & 3 & 0 & 56 & 5 & 121 & 0.364 \\ 
+  2 & 265 & 514 & 16 & 0 & 243 & 45 & 13 & 0.531 \\ 
+  3 & 0 & 5 & 679 & 153 & 37 & 200 & 0 & 0.368 \\ 
+  4 & 0 & 0 & 125 & 917 & 0 & 46 & 0 & 0.157 \\ 
+  5 & 2 & 86 & 41 & 0 & 925 & 37 & 0 & 0.152 \\ 
+  6 & 0 & 11 & 325 & 62 & 48 & 660 & 0 & 0.403 \\ 
+  7 & 91 & 5 & 0 & 0 & 3 & 0 & 944 & 0.095 \\ 
+   \hline
+\end{tabular}
+\caption{Confusion table of random forest using only elevation and soil type as covariates}
+\end{table}
+
+\noindent The table shows that, again, classes 1 and 2 are difficult to tell apart. Furthermore, the troubles in classifying cover types 3 and 6 seem to remain the same as when the individual classification tree was used. In fact, the lone decision tree proved out to better at classifying the cover types of the test data. The random forest, however, managed to produce a similar rate of classification using the information stored in only two covariates, while the individual tree used all features available. Hence, comparing the two models is somewhat unfair, and we decide to grow a random forest using all 12 covariates.
+
+The confusion matrix of the full random forest is shown in Table \ref{tab:conf_full}. As can be seen, the main source of miss-classification remains the same as before. However, the error rates of each individual class have decreased markedly, and the diagonal elements of the confusion matrix are more pronounced than in the matrices of any of the previous models. All in all, the model manages to produce a success rate of 84.4\%, which is a great improvement from the bivariate forest.
+
+
+\begin{table}[ht]\label{tab:conf_full}
+\centering
+\begin{tabular}{c|ccccccc|c}
+  \hline
+  &   \multicolumn{7}{ c| }{\textbf{Actual Cover Types}} \\
+ \textbf{Predicted} & 1 & 2 & 3 & 4 & 5 & 6 & 7 & \textbf{Error Rate} \\ 
+  \hline
+  1 & 782 & 172 & 1 & 0 & 30 & 5 & 74 & 0.265 \\ 
+  2 & 207 & 729 & 24 & 0 & 97 & 29 & 10 & 0.335 \\ 
+  3 & 0 & 4 & 836 & 55 & 17 & 162 & 0 & 0.222 \\ 
+  4 & 0 & 0 & 24 & 1052 & 0 & 12 & 0 & 0.033 \\ 
+  5 & 3 & 29 & 14 & 0 & 1033 & 12 & 0 & 0.053 \\ 
+  6 & 0 & 9 & 105 & 25 & 10 & 957 & 0 & 0.135 \\ 
+  7 & 42 & 1 & 0 & 0 & 1 & 0 & 999 & 0.042 \\
+  \hline
+\end{tabular}
+\caption{Confusion table of random forest using all covariates}
+\end{table}
+
+
+
+\subsection{Logit Model}
 
 
 
 \section{Conclusion} \label{sec:cocnlusion}
+
+
 
 \newpage
 \section*{References}
