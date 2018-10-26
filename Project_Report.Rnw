@@ -69,6 +69,7 @@ theme_forest <- theme_classic(base_family = "Optima") +       # Changes font
                                          colour = NA)
   )
 tune <- read.csv("tune.csv")
+imp <- read.csv("imp.csv")
 @
 
 \pagestyle{fancyplain}
@@ -122,7 +123,22 @@ Hej Vilgot!
 \newpage
 
 \section{Introduction}
-In this project, we will aim to grow enough trees to compensate for the cutting down of the Amazon rainforrest.
+
+Think of a warm summer's evening in Barcelona. Or Paris. Perhaps even Lisbon. You are strolling down some avenue, fingers intertwined with those of the love of your life. Everything seems so effortless, and you feel as if you are gliding, trees lining the streets. What we want to you to take away from this scenario is the trees. Trees are very important to us in many different ways. They provide us with oxygen and apples, timber and pears, and, of course, they always seem to be there to provide some much needed shade when the sun is burning your skin. Trees, however, come in many different shapes, and we would argue that perhaps the mathematical ones are just as important as the physical ones. This report will examine they way in which trees can be used on trees. We will use mathematical trees in order to classify the natural ones.
+
+In machine learning, random forests are used to classify variables, variables such as cancer cells, election results, and even trees. We will use the theory of machine learning in order to classify the cover type of different plots of land, picked at random from four wilderness areas throughout the United States.
+
+Our modelling will be done as part of a competition hosted by Kaggle, and apart from the competitve aspect of the project, we believe that classifying the cover type of a certain plot of land might be very useful indeed. Developing a model that successfully manages to classify the forest cover type could save plenty of resources, since it would reduce the need of flying over certain areas in order to determine what type of forest cover them. Thus, our research question is formulated as follows:
+
+\medskip
+\noindent \textbf{Research question}: \textit{How do we best classify the forest cover type using machine learning and random forests?}
+\medskip
+
+\noindent To answer our research question, we will use the data provided by Kaggle and grow a random forest with the purpose of classifying the cover types of any given plot of forest. The random forest itself is a collection of decision trees, that are also used for classification, and thus, we will grow a single classification tree and see how it compares to an entire forest. Furthermore, we will compare the results of the two tree-based models to that of a multinomial regression model.
+
+We grow two separate forests, one using only a fraction of all variables available, and one using all feature we have. We compare them to the individual decision tree and the multinomial model, and conclude that the reduced forest manages to extract roughly the same amount of information using two variables as the other two models using all of them. Also, we conclude that the full random forest model is most suitable in classifying the forest cover type, seeing as it achieve a classification rate of roughly 85\%.
+
+We will perform the statistical analysis presented in this paper using \texttt{R} and \texttt{Rstudio}, as well as packages called \texttt{randomForest}, \texttt{party}, and \texttt{nnet} in order to fit random forests, classification trees, and multinomial models respectively.
 
 \newpage
 \section{Data} \label{sec:data}
@@ -161,7 +177,8 @@ We begin by exploring the variable measuring the elevation of each plot of land,
 <<elev_density, echo=FALSE, fig.width = 6.5, fig.asp = 0.62, fig.align = "center", fig.cap = "Density plot showing the occurence of different cover types at different elevations", fig.pos = "h!">>=
 ggplot(data, aes(x = Elevation, fill = Cover_Type)) +
   geom_density(alpha = 0.8) +
-  labs(fill = "Cover Type") +
+  labs(fill = "Cover Type",
+       y = "Density") +
   theme_classic()
 @
 
@@ -209,7 +226,7 @@ ggplot(data, aes(y = Elevation, x = soil, color = Cover_Type)) +
 \section{Methods}
 This section will provide descriptions of the methods used in order to carry out this study. First, we will provide a brief discussion regarding decision trees, seeing as they make up the individual components of the random forests we want to grow. After that, we will delve deep into the world of random forests, in order to provide a deeper understanding of what goes on behind the algorithms of the \texttt{randomForest} package.
 
-\subsection{Decision Trees}
+\subsection{Decision Trees} \label{sec:dec_tree}
 Decision trees are a fairly simple way of classifying observations using cut-off points in order to divide the data set into groups. The cut-off points are usually called inner nodes, and they separate the data set into two new sets that do not overlap. Repeating this process for many variables will result in several inner nodes, and at the very end we will attain terminal nodes that decide which class each observation will belong to.
 
 Consider the elevation variable in our data set. It is quite reasonable to assume that different trees grow at different altitudes, seeing as different species require differing amounts of oxygen and sunlight, and perhaps even different temperatures. Hence, if we try to build a classification tree, we could assume that 4 out of the 7 types of tree tend to grow at altitudes lower than 1500 metres, and that the remaining 3 groups are usually found somewhat higher than that. Then we will have an inner node at which the tree splits into two branches, on containing the lower altitude trees and the other the trees growin higher up. For each branch, we continue searching for variables by which to grow even more branches, and eventually end up with a tree classifying every single observation in our data set. The concept of decision trees is illustrated in Figure \ref{fig:tree}, where the elevation has been used to classify the cover type.
@@ -368,7 +385,6 @@ Looking at Figure \ref{fig:soil_elev}, we can see something that resembles clust
 
 The confusion matrix of the full random forest is shown in Table \ref{tab:conf_full}. As can be seen, the main source of miss-classification remains the same as before. However, the error rates of each individual class have decreased markedly, and the diagonal elements of the confusion matrix are more pronounced than in the matrices of any of the previous models. All in all, the model manages to produce a success rate of 84.4\%, which is a great improvement from the bivariate case.
 
-
 \begin{table}[ht]\label{tab:conf_full}
 \centering
 \begin{tabular}{c|ccccccc|c}
@@ -388,10 +404,27 @@ The confusion matrix of the full random forest is shown in Table \ref{tab:conf_f
 \caption{Confusion table of random forest using all covariates}
 \end{table}
 
-\noindent All in all, it looks as if the random forest is a suitable way of classifying the cover types of the different plots of land. We managed to find a model able of calssifying about 85\% of the test data cover types correctly without having to add too much complexity to the model itself. We think it is interesting to find the power of even the simplest form of random forest models, and so we feel encouraged and well convinced that machine learning in general -- and random forest in particular -- are indeed are very important tool in the world of data analysis.
+\noindent In Section \ref{sec:exploration}, Figure \ref{fig:soil_elev} suggested that elevation and soil type might be the most important variables when it comes to classifying the cover types in our data set. Using the Gini index defined in Section \ref{sec:dec_tree}, we can compute how much each variable contributed to decreasing the variability on average. We present such a measure in figure \ref{fig:importance}. Evidently, elevation and soil type are the two variables that provide the model with most of it predictive power.
+
+All in all, it looks as if the random forest is a suitable way of classifying the cover types of the different plots of land. We managed to find a model able of calssifying about 85\% of the test data cover types correctly without having to add too much complexity to the model itself. We think it is interesting to find the power of even the simplest form of random forest models, and so we feel encouraged and well convinced that machine learning in general -- and random forest in particular -- are indeed are very important tool in the world of data analysis.
 
 Finally, we want to compare the results of our random forest model to those of a model that might seem more intuitive at first glance, at least to those who are not statisticians by trade. Regression models often seem to be the threshold at which most people choose to stop learning about statistics. Hence, we want to explore the possibilities of classifying the cover types using models that most people can relate to at least by the name, and decide to use the multinomial logit regression model means of determining the power of the random forest.
 
+<<importance, echo = FALSE, fig.cap = "Plot showing the mean decrease in Gini index generated by each feature. Elevation and soil type look to be by far the most important", fig.height = 5>>=
+imp %>%
+  arrange(var) %>%
+  ggplot(mapping = aes(x = gini, y = fct_reorder(var, gini))) +
+  geom_point() +
+  labs(x = "Mean decrease in Gini index",
+       y = "Variable") +
+  scale_y_discrete(labels = c("Slope", "Afternoon Shade", "Noon Shade", 
+                              "Aspect", "Vertical Water",
+                              "Morning Shade", "Horizontal Water", "Wilderness Area",
+                              "Horizontal Fire", "Horizontal Road", "Soil Type", "Elevation"))+
+  theme_classic() +
+  theme(panel.grid.major.y = element_line(color = "gray92"),
+        panel.grid.major.x = element_line(color = "gray92"))
+@
 
 \subsection{Logit Model}
 The multinomial logit model at its very simplest manages to classify 70\% of the test data cover types correctly, hence performing at a rate similar to that of the bivariate random forest. Looking at the confusion matrix shown in Table \ref{tab:conf_mult}, we see that the error sources seem to be the same as before, namely cover types 1, 2, 3, and 6.
@@ -421,6 +454,60 @@ However, the fact we use all covariates available in the logit model, as opposed
 \section{Conclusion} \label{sec:cocnlusion}
 
 Support vector machines or random forest kernels?
+
+\newpage
+
+\noindent \textbf{Hej Vilgot, h\"{a}r finns dina tabeller! T\"{a}nker att du kanske vill fylla i den sista sannolikheterna med s\.{a} att det blir lite snyggare. Fyll bara i dem ist\"{a}llet f\"{o}r "sista" i varje kolumn}
+
+\begin{center}
+\begin{table}[ht]
+\centering
+\begin{tabular}{cccccccc}
+  \hline
+  &   \multicolumn{7}{ c }{\textbf{Cover Types}} \\
+\cline{2-8}
+\textbf{Obs \#} &  \textbf{1} &  \textbf{2} &  \textbf{3} &  \textbf{4} &  \textbf{5} &  \textbf{6} &  \textbf{7} \\ 
+  \hline
+ \textbf{1} & 0.02 & 0.96 & 0.00 & 0.00 & 0.01 & 0.00 & 0.00 \\ 
+ \textbf{2} & 0.01 & 0.97 & 0.00 & 0.00 & 0.02 & 0.00 & 0.00 \\ 
+ \textbf{3} & 0.01 & 0.99 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 \\ 
+ \textbf{4} & 0.10 & 0.24 & 0.00 & 0.00 & 0.65 & 0.00 & 0.01 \\ 
+ \textbf{5} & 0.04 & 0.93 & 0.00 & 0.00 & 0.03 & 0.00 & 0.00 \\
+ \vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \vdots  \\
+ \textbf{15120} & sista & sista & sista & sista & sista & sista & sista \\
+ \hline 
+Mean & 0.15 & 0.12 & 0.12 & 0.16 & 0.15 & 0.15 & 0.14 \\ 
+   \hline
+\end{tabular}
+\caption{Table with the propportions of the sample from the five first observations and the mean of all 15 120 observations.} 
+\label{tab:sample_matrix}
+\end{table}
+\end{center}
+
+\begin{center}
+\begin{table}[ht]
+\centering
+\begin{tabular}{cccccccc}
+  \hline
+  &   \multicolumn{7}{ c }{\textbf{Cover Types}} \\
+\cline{2-8}
+\textbf{Obs \#} &  \textbf{1} &  \textbf{2} &  \textbf{3} &  \textbf{4} &  \textbf{5} &  \textbf{6} &  \textbf{7} \\ 
+  \hline
+ \textbf{1} & 0.03 & 0.96 & 0.00 & 0.00 & 0.01 & 0.00 & 0.00 \\ 
+ \textbf{2} & 0.01 & 0.97 & 0.00 & 0.00 & 0.02 & 0.00 & 0.00 \\ 
+ \textbf{3} & 0.01 & 0.99 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 \\ 
+ \textbf{4} & 0.10 & 0.25 & 0.00 & 0.00 & 0.64 & 0.00 & 0.01 \\ 
+ \textbf{5} & 0.04 & 0.93 & 0.00 & 0.00 & 0.03 & 0.00 & 0.00 \\ 
+ \vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \vdots & \vdots  \\
+ \textbf{15120} & sista & sista & sista & sista & sista & sista & sista \\
+ \hline 
+Mean & 0.15 & 0.12 & 0.12 & 0.16 & 0.15 & 0.15 & 0.14 \\ 
+   \hline
+\end{tabular}
+\caption{Table with the predicted probabilities of the five first observations and the mean of all 15 120 observations.} 
+\label{tab:prob_matrix}
+\end{table}
+\end{center}
 
 
 \newpage
