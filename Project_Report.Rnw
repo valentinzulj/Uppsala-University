@@ -112,8 +112,7 @@ imp <- read.csv("imp.csv")
 
 \newpage
 \begin{abstract}
-Hej Vilgot!
-
+The aim of this report is to use a Random forest model to classify the main type of tree in a specific area. There are 13 different variables ment to explain the tree type, where elevation and soil type seems to have the biggest impact. The Random forest model is compared with two other methods for classification, decision tree and a multinomial logit model. The results shows that the Random forest is the best model for classifying the correct type of tree in the test set, with a correct classification rate of 84.4 \%. It is followed by the decision tree model and the multinomial logit model, with a correct classification rate of 73.6 \% and 70 \%. The report also includes a small simulation study, where a new data set is generated and the sample function is evaluated. 
 
 \end{abstract}
 
