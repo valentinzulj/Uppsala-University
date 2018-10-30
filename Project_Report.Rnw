@@ -70,6 +70,13 @@ theme_forest <- theme_classic(base_family = "Optima") +       # Changes font
   )
 tune <- read.csv("tune.csv")
 imp <- read.csv("imp.csv")
+
+olika_prediktioner <- read.csv("olika_prediktioner.csv")
+olika_prediktioner <- olika_prediktioner[,2:32]
+
+for(i in 1:15){
+  olika_prediktioner[i,32] <- sum(olika_prediktioner[i,2:31])/30
+}
 @
 
 \pagestyle{fancyplain}
@@ -152,11 +159,11 @@ The data set consists of 55 variables, most of which -- 40 to be precise -- are 
     \item Elevation: Elevation -- in metres -- of the plot of land
     \item Aspect: Aspect in degrees azimuth
     \item Slope: Slope -- in degrees -- of the plot of land
-    \item Horizontal: The horizontal distance to the nearest water source
-    \item Vertical: The vertical distance to the nearest source of water
+    \item The horizontal distance to the nearest water source
+    \item The vertical distance to the nearest source of water
     \item Horizontal roadways: Horizontal distance to the nearest roadway
     \item Hillshade (9am, noon, 3pm): Index showing degree of shade from hills at different times of day
-    \item Horizontal: Horizontal distance to the nearest point where wildfire ignition is allowed
+    \item The horizontal distance to the nearest point where wildfire ignition is allowed
 \end{itemize}
 
 \noindent The variables themselves are all quite straight forward, althoguht it is worth mentioning that the hillshade index is measured on a scale from 0 to 255. Furthermore, there are some binary columns specifying whether the plot of land is located within one of four wilderness areas, as well as the 40 binary columns that indicate the type of soil in which the trees grow. However, two type of soils, coded as 7 and 15, doe not show up in any observation. 
@@ -349,16 +356,46 @@ Carrying out the proces described above will yield a data set that is completely
 \subsection{Simulation}
 Our simulation study aims to examine what effect the depth of each tree has on the classification rate of a random forest. As in Section \ref{sec:for}, we use the \texttt{maxnodes} setting as a proxy for tree depth. We train a set of 15 random forest models using the entire data set provided by Kaggle, with each model restricted by a given amount of maximum terminal nodes. The values of \texttt{maxnodes} are sampled from the interval [100, 4000], and then rounded into integers using the \texttt{round} fucntion. The range of the maximum terminal nodes allowed is chosen with respect to the discussion given in Section \ref{sec:for}.
 
-Having grown the 15 forests, we use the DGP described in Section \ref{sec:dgp} to generate 30 uniquie data sets, and classify the cover types of every data set using each of the 15 forests. For the sake of aesthetics, we will present a figure showing the classification rates for 10 of the data sets, and the provide the means classification rate for each value of \texttt{maxnodes} in a separate table.
+Having grown the 15 forests, we use the DGP described in Section \ref{sec:dgp} to generate 30 uniquie data sets, and classify the cover types of every data set using each of the 15 forests. For the sake of aesthetics, we will present a figure showing the classification rates for 15 of the data sets, as well as the mean classification rate of each model for different values of \texttt{maxnodes}. The results of the simulation study are shown in Figure \ref{fig:sim_result}.
+ 
+<<sim_result, echo = FALSE, fig.height = 5, fig.cap = "The classiification rate of each model for different tree depths. The dashed line gives the mean classification rate of all data sets generated">>=
+ggplot(olika_prediktioner, aes(x = b)) +
+  geom_line(aes(x = b, y = V2), color = "yellow", lwd = 1.5) +
+  geom_line(aes(x = b, y = V3), color = "red", lwd = 1.5) +
+  geom_line(aes(x = b, y = V4), color = "green", lwd = 1.5) +
+  geom_line(aes(x = b, y = V5), color = "blue", lwd = 1.5) +
+  geom_line(aes(x = b, y = V6), color = "orange", lwd = 1.5) +
+  geom_line(aes(x = b, y = V7), color = "pink", lwd = 1.5) +
+  geom_line(aes(x = b, y = V8), color = "purple", lwd = 1.5) +
+  geom_line(aes(x = b, y = V9), color = "black", lwd = 1.5) +
+  geom_line(aes(x = b, y = V10), color = "forestgreen", lwd = 1.5) +
+  geom_line(aes(x = b, y = V11), color = "goldenrod1", lwd = 1.5) +
+  geom_line(aes(x = b, y = V12), color = "darkslategray1", lwd = 1.5) +
+  geom_line(aes(x = b, y = V13), color = "tomato3", lwd = 1.5) +
+  geom_line(aes(x = b, y = V14), color = "violet", lwd = 1.5) +
+  geom_line(aes(x = b, y = V15), color = "yellowgreen", lwd = 1.5) +
+  geom_line(aes(x = b, y = V16), color = "indianred4", lwd = 1.5) +
+  geom_line(aes(x = b, y = V17), color = "lightgoldenrod4", lwd = 1.5) +
+  geom_line(aes(x = b, y = V32), color = "midnightblue", lwd = 2, linetype = 3) +
+  scale_x_continuous(breaks = c(1, 3, 6, 9, 12, 15),
+                   labels = c(100, 657, 1493, 2329, 3164, 4000)) +
+  scale_y_continuous(breaks = c(0.44, 0.48, 0.52, 0.56),
+                     labels = c("44", "48", "52", "56")) +
+  labs(x = "Maximum Amount of Terminal Nodes",
+       y ="Classification Rate (%)") +
+  theme_classic()
+@
 
 
+
+\newpage
 
 \section{Results} \label{sec:results}
 \subsection{Classification Tree}
 
 We were quite surprised to see see the relatively high classification rate of the simple decision tree. The classification tree managed to correctly classify roughly 73.6\% of the test observations, using only the default settings of the \texttt{ctree} function. We present the confusion matrix of the model in Table \ref{tab:conf_tree}.
 
-\begin{table}[ht]\label{tab:conf_tree}
+\begin{table}[ht]
 \centering
 \begin{tabular}{c|ccccccc|c}
   \hline
@@ -375,6 +412,7 @@ We were quite surprised to see see the relatively high classification rate of th
    \hline
 \end{tabular}
 \caption{Confusion table of single decision tree}
+\label{tab:conf_tree}
 \end{table}
 
 \noindent As is shown in the table, cover types 1 and 2 seem to be rather similar, and the model finds it difficult to distinguish between them. Perhaps this is not very surprising, seeing as the plots in Section \ref{sec:data} suggest that the two types of trees seem to grow at similar altidtudes, and also tend to keep the same horizontal distance to water. Furthermore, classes 3 and 6 look to be hard to predict. Looking at the table, the predictions of theses two classes in particular show greater variability that the rest. 
@@ -386,7 +424,7 @@ Moving on, we will fit random forest models to the same data in order to see if 
 Looking at Figure \ref{fig:soil_elev}, we can see something that resembles clusters of different cover types. In the top right corner, for example, there are trees of type seven. Also, trees of type 3 seem to be concentrated at the lower left portion of the figure. In other words, it looks as if elevation and soil type capture a significant share of the variation in cover types. Hence, we will begin by growing a random forest that uses only soil and elevation as features. The bivariate random forest model manages to classify about 70\% of the test observations correctly, and the confusion matrix of the model is given in Table \ref{tab:conf_reduced}.
 
 
-\begin{table}[ht]\label{tab:conf_reduced}
+\begin{table}[ht]
 \centering
 \begin{tabular}{c|ccccccc|c}
   \hline
@@ -403,13 +441,14 @@ Looking at Figure \ref{fig:soil_elev}, we can see something that resembles clust
    \hline
 \end{tabular}
 \caption{Confusion table of random forest using only elevation and soil type as covariates}
+\label{tab:conf_reduced}
 \end{table}
 
 \noindent The table shows that, again, classes 1 and 2 are difficult to tell apart. Furthermore, the troubles in classifying cover types 3 and 6 seem to remain the same as when the individual classification tree was used. In fact, the lone decision tree proved out to better at classifying the cover types of the test data. The random forest, however, managed to produce a similar rate of classification using the information stored in only two covariates, while the individual tree used all features available. Hence, comparing the two models is somewhat unfair, and we decide to grow a random forest using all 12 covariates.
 
 The confusion matrix of the full random forest is shown in Table \ref{tab:conf_full}. As can be seen, the main source of miss-classification remains the same as before. However, the error rates of each individual class have decreased markedly, and the diagonal elements of the confusion matrix are more pronounced than in the matrices of any of the previous models. All in all, the model manages to produce a success rate of 84.4\%, which is a great improvement from the bivariate case.
 
-\begin{table}[ht]\label{tab:conf_full}
+\begin{table}[ht]
 \centering
 \begin{tabular}{c|ccccccc|c}
   \hline
@@ -426,6 +465,7 @@ The confusion matrix of the full random forest is shown in Table \ref{tab:conf_f
   \hline
 \end{tabular}
 \caption{Confusion table of random forest using all covariates}
+\label{tab:conf_full}
 \end{table}
 
 \noindent In Section \ref{sec:exploration}, Figure \ref{fig:soil_elev} suggested that elevation and soil type might be the most important variables when it comes to classifying the cover types in our data set. Using the Gini index defined in Section \ref{sec:dec_tree}, we can compute how much each variable contributed to decreasing the variability on average. We present such a measure in figure \ref{fig:importance}. Evidently, elevation and soil type are the two variables that provide the model with most of it predictive power.
@@ -456,7 +496,7 @@ The multinomial logit model at its very simplest manages to classify 70\% of the
 However, the fact we use all covariates available in the logit model, as opposed to only two in the bivariate forest, points to the power of the random forest as a classifying tool.
 
 
-\begin{table}[ht]\label{tab:conf_mult}
+\begin{table}[ht]
 \centering
 \begin{tabular}{c|ccccccc|c}
   \hline
@@ -473,11 +513,34 @@ However, the fact we use all covariates available in the logit model, as opposed
   \hline
 \end{tabular}
 \caption{Confusion table of multinomial logit model}
+\label{tab:conf_mult}
 \end{table}
 
 \section{Conclusion} \label{sec:cocnlusion}
+As stated in the introduction of this report, we set out to examine how machine learning -- random forests in particular -- can be used to classify the forest cover type of any given plot of land. In doing so, we tried using three different methods, fitting four models. We have summarized the results of our study in Table \ref{tab:summary}, which shows that the random forest grown using all features available is by far the most successful in classifying the forest cover types.
 
-Support vector machines or random forest kernels?
+\begin{table}[ht]
+\centering
+\begin{tabular}{ccccc}
+  \hline
+&  \multicolumn{4}{ c }{\textbf{Model}} \\
+\cline{2-5}
+& \textbf{Tree} &  \textbf{Reduced RF} &  \textbf{Full RF} &  \textbf{Logit}\\ 
+  \hline
+\textbf{Success Rate (\%)} & 73.6 & 70 & 84.4 & 70 \\    
+\hline
+\end{tabular}
+\caption{Classification rates of our estimated models}
+\label{tab:summary}
+\end{table}
+
+\noindent Furthermore, we conducted a minor simulation study in order to determine what effect tree depth has on the performance of a random forest model
+
+As any, our models do have limitations. Firstly, we would like to bring forward the way in which we went about tuning the random forest models -- or choosing values of \texttt{maxnodes} and \texttt{ntree}. As discussed in Section \ref{sec:for}, we determine the value of \texttt{maxnodes} first, and then use it as a given when finding a suitable value of \texttt{ntree}. Going through the literature, there seems to be a consensus stating that the number of trees used does not seem to have a great effect on random forest models when a certain level has been reached \cite{islr}. Hence, we chose to focus on tree depth first. It could be of interest, of course, to see what model would be deemed most suitable if the options were tried the other way around.
+
+Secondly, the models we use are very simple, and we have not dug very far into the teory of random forests in order to find a model performing almost without fault. Instead, we have tried to understand how the basics of the models actually work, and thought of ways to fit good models that are relatively intuitive and easy to understand. While searching the web, however, we find extensions to the models that could be used to improve the rates of classification. The one that we find most interesting is adding the random forest as a kernel when using some other form of classification tool -- like the support vector machine or principal component analysis \cite{kernel}.
+
+Finally, we believe that the DGP of our simulation study could be improved by using individual random forests rather than multinomial logit models when generating the new cover types. Such a proces would be very computationally intesive, and we chose to use logit models in the end. Now, the use of random forests could yield different results, but generally we believe that the main idea would be the same -- namely that the classification rate converges as the tree depth continues to increase.
 
 
 \newpage
@@ -491,10 +554,6 @@ Support vector machines or random forest kernels?
 \bibliography{bibl}
 %\nocite{yam, zk, pakj, coleman, barro1, dinesen, jones, sol} 
 \end{multicols}
-
-
-
-
 
 
 \end{document}
