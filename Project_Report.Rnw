@@ -96,7 +96,7 @@ for(i in 1:15){
         
         \vspace{0.5cm}
         
-        \textbf{\large{Snillgot \"{O}sterlund \& Valentin Zulj}} \\
+        \textbf{\large{Vilgot \"{O}sterlund \& Valentin Zulj}} \\
         
          
       \vspace{0.5cm}
@@ -119,7 +119,7 @@ for(i in 1:15){
 
 \newpage
 \begin{abstract}
-\noindent The aim of this report is to use a Random forest model to classify the main type of tree in a specific area. There are 13 different variables ment to explain the tree type, where elevation and soil type seems to have the biggest impact. The Random forest model is compared with two other methods for classification, decision tree and a multinomial logit model. The results shows that the Random forest is the best model for classifying the correct type of tree in the test set, with a correct classification rate of 84.4\%. It is followed by the decision tree model and the multinomial logit model, with a correct classification rate of 73.6\% and 70\%. The report also includes a small simulation study, where the effect of tree depth on the classification rate is examined. 
+\noindent The aim of this report is to use a Random forest model to classify the main type of tree in a specific area. There are 12 different variables ment to explain the tree type, where elevation and soil type seems to have the biggest impact. The Random forest model is compared with two other methods for classification, decision tree and a multinomial logit model. The results shows that the Random forest is the best model for classifying the correct type of tree in the test set, with a correct classification rate of 84.4\%. It is followed by the decision tree model and the multinomial logit model, with a correct classification rate of 73.6\% and 70\%. The report also includes a small simulation study, where the effect of tree depth on the classification rate is examined. 
 \end{abstract}
 
 \newpage
@@ -129,7 +129,7 @@ for(i in 1:15){
 
 \section{Introduction}
 
-Think of a warm summer's eve in Barcelona. Or Paris. Perhaps even Lisbon. You are strolling down the most beautiful of avenues, fingers intertwined with those of your loved one. Everything seems so effortless, and you feel as if you are gliding. Trees lining the streets. What we want to you to take away from this scenario is the trees. Trees are very important to us in many different ways. They provide us with oxygen and apples, timber and pears, and, of course, they always seem to be there to provide some much needed shade when the sun is burning your skin. Trees, however, come in many different shapes, and we would argue that perhaps the mathematical ones are just as important as the physical ones. This report will examine they way in which trees can be used on trees. We will use mathematical trees in order to classify the natural ones.
+Think of a warm summer's eve in Barcelona. Or Paris. Perhaps even Lisbon. You are strolling down the most beautiful of avenues, fingers intertwined with those of your loved one. Everything seems so effortless, and you feel as if you are gliding. Trees lining the streets. What we want to you to take away from this scenario is the trees. Trees are very important to us in many different ways. They provide us with oxygen and apples, timber and pears, and, of course, they always seem to be there to provide some much needed shade when the sun is burning your skin. Trees, however, come in many different shapes, and we would argue that perhaps the mathematical ones are just as important as the physical ones. This report will examine the way in which trees can be used on trees. We will use mathematical trees in order to classify the natural ones.
 
 In machine learning, random forests are used to classify variables such as cancer cells, election results, and even trees. We will use the theory of machine learning in order to classify the cover type of different plots of land, picked at random from four wilderness areas throughout the United States.
 
@@ -141,7 +141,7 @@ Our modelling will be done as part of a competition hosted by Kaggle, and apart 
 
 \noindent To answer our research question, we will use the data provided by Kaggle and grow a random forest with the purpose of classifying the cover types of any given plot of forest. The random forest itself is a collection of decision trees, that are also used for classification, and thus, we will grow a single classification tree and see how it compares to an entire forest. Furthermore, we will compare the results of the two tree-based models to that of a multinomial regression model.
 
-We grow two separate forests, one using only a fraction of the variables available, and one using all feature we have. We compare them to the individual decision tree and the multinomial model, and conclude that the reduced forest manages to extract roughly the same amount of information using two variables as the other two models using all of them. Also, we conclude that the full random forest model is most suitable in classifying the forest cover type, seeing as it achieves a classification rate of roughly 85\%.
+We grow two separate forests, one using only a fraction of the variables available, and one using all features we have. We compare them to the individual decision tree and the multinomial model, and conclude that the reduced forest manages to extract roughly the same amount of information using two variables as the other two models using all of them. Also, we conclude that the full random forest model is most suitable in classifying the forest cover type, seeing as it achieves a classification rate of roughly 85\%.
 
 We will perform the statistical analysis presented in this paper using \texttt{R} and \texttt{Rstudio}, as well as packages called \texttt{randomForest}, \texttt{party}, and \texttt{nnet} in order to fit random forests, classification trees, and multinomial models respectively.
 
@@ -209,10 +209,7 @@ ggplot(data, aes(x = Hillshade_3pm, y = Elevation, color = Cover_Type, size = h_
 
 Figure \ref{fig:h_water_boxplot} shows a boxplot of the cover type and the horizontal distance to water of the corresponding plot of land. The horizontal distance to water looks to be of little importance in determining the cover type of any given plot of land. Perhaps a greater distance could be used to filter out covers of type seven, and plots in relative proximity to water might be likely to have a cover of type four. Otherwise, there seems to be no particular way of distinguising cover types using the variable itself.
 
-In the process of visually explorating our data, we finnd that the relationship found in Figure \ref{fig:soil_elev} was the most interesting. The plot shows how the cover types are spread out over different elevations and soil types, and looking at it we quickly see that some sort of clusters start to take shape. For example, the top right of the graph is almost exclusively pink, meaning that cover type 7 looks most likely to occur when then plot of land is situated at a high elevation, and the soil type ranges from approximately 35 to 40.
-
-Furthermore, we can see orange occuring mostly in the middle of the graph, and the lighter shade of green in the bottom left. We also note that cover types 3 and 6 seem to intertwine rather heavily in the bottom left of the graph, which will prove out to be a limiting factor in the success rate of our models. All in all, we believe that Figure \ref{fig:soil_elev} indicates that elevation and soil type are very important in determining the forest cover type.
-
+In the process of visually explorating our data, we find that the relationship found in Figure \ref{fig:soil_elev} was the most interesting. The plot shows how the cover types are spread out over different elevations and soil types, and looking at it we quickly see that some sort of clusters start to take shape. For example, the top right of the graph is almost exclusively pink, meaning that cover type 7 looks most likely to occur when then plot of land is situated at a high elevation, and the soil type ranges from approximately 35 to 40.
 
 <<h_water_boxplot, echo=FALSE, fig.width = 5.5, fig.asp = 0.62, fig.align = "center", fig.cap = "Boxplot showing where different cover types occur in relation to the nearest source of water">>=
 ggplot(data, aes(x = Cover_Type, y = h_water, fill = Cover_Type)) +
@@ -233,6 +230,8 @@ ggplot(data, aes(y = Elevation, x = soil, color = Cover_Type, alpha = 0.3)) +
   theme_classic()
 @
 
+\noindent Furthermore, we can see orange occuring mostly in the middle of the graph, and the lighter shade of green in the bottom left. We also note that cover types 3 and 6 seem to intertwine rather heavily in the bottom left of the graph, which will prove out to be a limiting factor in the success rate of our models. All in all, we believe that Figure \ref{fig:soil_elev} indicates that elevation and soil type are very important in determining the forest cover type.
+
 \section{Methods}
 This section will provide descriptions of the methods used in order to carry out this study. First, we will provide a brief discussion regarding decision trees, seeing as they make up the individual components of the random forests we want to grow. After that, we will delve deep into the world of random forests, in order to provide a deeper understanding of what goes on behind the algorithms of the \texttt{randomForest} package.
 
@@ -247,11 +246,8 @@ In order to better understand the mathematics of classification trees, we need t
 G = \sum \limits_{k=1}^{K} \hat{p}_{mk} \left(1-\hat{p}_{mk} \right),
 \end{flalign}
 
-\noindent where $\hat{p}_{mk}$ is the proportion of training observations of class $k$ in the $m$:th branch. The Gini index is a measure of variance across the $K$ number classes, and hence we want to choose the cut-off values of each branch in a way that minimizes the Gini index. There are several other types of variance measures that can be used to fit classification trees, such as \textit{classification error rate} and \textit{entropy}. However, the classification error rate is too robust for growing a meaningful tree \cite{islr}. We find the the Gini index is more intuitive than the measure of entropy, and that the Gini index easier to understand, and hence choose to use it in our project. 
+\noindent where $\hat{p}_{mk}$ is the proportion of training observations of class $k$ in the $m$:th branch. The Gini index is a measure of variance across the $K$ number classes, and hence we want to choose the cut-off values of each branch in a way that minimizes the Gini index. There are several other types of variance measures that can be used to fit classification trees, such as \textit{classification error rate} and \textit{entropy}. However, the classification error rate is too robust for growing a meaningful tree \cite{islr}. We find that the Gini index is more intuitive than the measure of entropy, and that the Gini index easier to understand, and hence choose to use it in our project. 
 
-Classification trees grown according to the method described above are prone to overfitting, and using them on data other than the training set is bound to yield a very high variance. Hence, we introduce the concept of \textit{pruning}, which strives to simplify the trees and make them more generally applicable.
-
-Pruning means that we use the training data to grow a tree of maximum depth -- or the maximum amount of splits -- and then work our way back to find the subtree that provides the best classification rate. Doing this, we reduce the risk of overfitting, and find the tree that gives us the greatest classification power. In short, we grow our trees accoring to the following plan:
 
 <<"tree", echo = FALSE, fig.align = "center", fig.cap = "Classification tree for Cover Type, using elevation as a covariate", fig.height = 5.35, fig.pos = "h!">>=
 test_tree <- rpart(Cover_Type ~ Elevation, data = train)
@@ -259,6 +255,9 @@ plot(test_tree, uniform=TRUE)
 text(test_tree, use.n=FALSE, all=TRUE, cex=.5)
 @
 
+\noindent Classification trees grown according to the method described above are prone to overfitting, and using them on data other than the training set is bound to yield a very high variance. Hence, we introduce the concept of \textit{pruning}, which strives to simplify the trees and make them more generally applicable.
+
+Pruning means that we use the training data to grow a tree of maximum depth -- or the maximum amount of splits -- and then work our way back to find the subtree that provides the best classification rate. Doing this, we reduce the risk of overfitting, and find the tree that gives us the greatest classification power. In short, we grow our trees accoring to the following plan:
 
 \begin{enumerate}
 \item Grow a tree -- call it $T_{0}$ --  using the training data and the maximum number of splits allowed
@@ -311,11 +310,10 @@ Seeing as the tree is grown only to provide some sort of relation to the random 
 
 
 \subsection{Random Forest} \label{sec:for}
-As stated in section \ref{sec:forest}, the only real possibility of tuning the random forest model is modifying the depth, as well as the number of trees used in the forest, at least at the level of beginners. In order to find a final model to use for classification, we run a couple of loops that that fit models and make predictions using different restrictions to the number of terminal nodes and the number of trees allowed. The loops themselves are fairly simple, and they will only be included in the \texttt{.R} appendix file of this report. Having evaluated the model for different values of the maximum amount of terminal nodes allowed, we conclude that the classification rate seems to converge to a value close to 85\% when \texttt{maxnodes} takes on values that exceed 2500. Hence, 2500 will be the value we use in our final model.
+As stated in Section \ref{sec:forest}, the only real possibility of tuning the random forest model is modifying the depth, as well as the number of trees used in the forest, at least at the level of beginners. In order to find a final model to use for classification, we run a couple of loops that that fit models and make predictions using different restrictions to the number of terminal nodes and the number of trees allowed. The loops themselves are fairly simple, and they will only be included in the \texttt{.R} appendix file of this report. Having evaluated the model for different values of the maximum amount of terminal nodes allowed, we conclude that the classification rate seems to converge to a value close to 85\% when \texttt{maxnodes} takes on values that exceed 2500. Hence, 2500 will be the value we use in our final model.
 
-Knowing that, we set \texttt{maxnodes} to 2500 and run the model allowing for different amounts of trees to be used in the forest. As can be seen in Figure \ref{fig:tune}, the classification rate does not seem to be affected by the number of trees, given the number of terminal nodes allowed. Hence, we use the default setting when it comes to \texttt{ntree}, which grows a forest of 500 trees. The \texttt{randomForest} function does not seem to contain a setting that controls the direct depth of the tree. Thus, we use \texttt{maxnodes} as a proxy.
 
-<<tune, echo = FALSE, warning = FALSE, fig.height = 4, fig.cap = "Effects of terminal nodes and number of trees on the classification rate">>=
+<<tune, echo = FALSE, warning = FALSE, fig.height = 4, fig.cap = "Effects of terminal nodes and number of trees on the classification rate", fig.pos = "h!">>=
 tune %>%
   ggplot() +
   geom_line(mapping = aes(x = allowed, y = maxnodes, col = "No. of Nodes")) +
@@ -329,6 +327,8 @@ tune %>%
   guides(color = guide_legend((title = NULL))) +
   theme_classic()
 @
+
+\noindent Knowing that, we set \texttt{maxnodes} to 2500 and run the model allowing for different amounts of trees to be used in the forest. As can be seen in Figure \ref{fig:tune}, the classification rate does not seem to be affected by the number of trees, given the number of terminal nodes allowed. Hence, we use the default setting when it comes to \texttt{ntree}, which grows a forest of 500 trees. The \texttt{randomForest} function does not seem to contain a setting that controls the direct depth of the tree. Thus, we use \texttt{maxnodes} as a proxy.
 
 For each of the separations, we let the function consider $\sqrt{p}$ covariates, and proceed using the one that gives the best classification rate. This decision is based mainly with reference to the literature, with both referenced books using the same principle. The number of covariates to consider is determined by the \texttt{mtry} option of the package, and when growing a forest of classification trees it is set to $\sqrt{p}$ by default. Hence, we do no consider making any changes to it.
 
@@ -355,14 +355,14 @@ Our simulation study will use a data generating process -- DGP -- made up of sev
 For the cover types, we use the class probabilites given by the multinomial logit model. Using them, we sample a cover type for each observation, giving us a random element that is still connected to the actual data itself. For the elevation, we consult the Gauss-Markov theorem and use the fact that 
 $\varepsilon_{i} \sim N(0, \sigma)$, where $\varepsilon$ denotes the error terms of a regression model, and $\sigma$ is a constant greater than 0. When estimating the elevations, we add a random term to each observation, drawn from $N(0,\hat{\sigma})$, where $\hat{\sigma}$ is the estimated standard error of the residuals given by the regression model -- in our case, it has been estimated to 99.
 
-Carrying out the proces described above yields a data set that is completely new, and stochastic in some elements. However, the new data set is still clearly connected to the old data set, and hence, we use it to perform our simulation study.
+Carrying out the process described above yields a data set that is completely new, and stochastic in some elements. However, the new data set is still clearly connected to the old data set, and hence, we use it to perform our simulation study.
 
 \subsubsection{Simulation}
 Our simulation study aims to examine what effect the depth of each tree has on the classification rate of a random forest. As in Section \ref{sec:for}, we use the \texttt{maxnodes} setting as a proxy for tree depth. We train a set of 15 random forest models using the entire data set provided by Kaggle, with each model restricted by a given amount of maximum terminal nodes. The values of \texttt{maxnodes} are taken from the interval [100, 4000], and then rounded into integers using the \texttt{round} function. The range of the maximum terminal nodes allowed is chosen with respect to the discussion given in Section \ref{sec:for}.
 
 Having grown the 15 forests, we use the DGP described in Section \ref{sec:dgp} to generate 30 uniquie data sets, and classify the cover types of every data set using each of the 15 forests. For the sake of aesthetics, we will present a figure showing the classification rates for 15 of the data sets, as well as the mean classification rate of each model for different values of \texttt{maxnodes}. The results of the simulation study are shown in Figure \ref{fig:sim_result}.
- 
-<<sim_result, echo = FALSE, fig.height = 5, fig.cap = "The classiification rate of each model for different tree depths. The dashed line gives the mean classification rate of all data sets generated">>=
+
+<<sim_result, echo = FALSE, fig.height = 5, fig.cap = "The classiification rate of each model for different tree depths. The dashed line gives the mean classification rate of all data sets generated", fig.pos = "h!">>=
 ggplot(olika_prediktioner, aes(x = b)) +
   geom_line(aes(x = b, y = V2), color = "yellow", lwd = 1.5) +
   geom_line(aes(x = b, y = V3), color = "red", lwd = 1.5) +
@@ -390,7 +390,7 @@ ggplot(olika_prediktioner, aes(x = b)) +
   theme_classic()
 @
 
-In figure \ref{fig:sim_result} the results from the classification of 15 of the new data sets are shown. Each line corresponds to one data set, and the dotted line represents the mean of all 30 data sets. Surprisingly, and directly opposite to the discussion found in Section \ref{sec:for}, we see that the classification rate tends to decrease when the maximum number of allowed nodes increase. We are unsure about what causes this, but it might be because a case of overfitting the model to the original data. The classification rate seems to stabilize at around 2000 nodes. Perhaps this can be seen as something similar to what was found in Section \ref{sex:for}, where our classification rates seemed to converge after about 2500 nodes.
+\noindent In Figure \ref{fig:sim_result} the results from the classification of 15 of the new data sets are shown. Each line corresponds to one data set, and the dotted line represents the mean of all 30 data sets. Surprisingly, and directly opposite to the discussion found in Section \ref{sec:for}, we see that the classification rate tends to decrease when the maximum number of allowed nodes increase. We are unsure about what causes this, but it might be a case of overfitting the model to the original data. The classification rate seems to stabilize at around 2000 nodes. Perhaps this can be seen as something similar to what was found in Section \ref{sec:for}, where our classification rates seemed to converge after about 2500 nodes.
 
 Adding to that, the contradicting results might stem from allowing randomness in the data genarating process. We would expect the classification rate to decrease because of the increased variability of the data, but the fact that the classification rate decreases as the number of terminal nodes increase is, to us, a very strange phenomenon. Looking back at Figure \ref{fig:soil_elev}, however, we see that som trees grow at very similar elevations. Hence, seeing as the variance of the random term added to the elevation in our DGP is so high, this might mean that some observations move over the cut-off points of the decision trees, deceiving the model in the process.
 
@@ -419,13 +419,13 @@ We were quite surprised to see see the relatively high classification rate of th
 \label{tab:conf_tree}
 \end{table}
 
-\noindent As is shown in the table, cover types 1 and 2 seem to be rather similar, and the model finds it difficult to distinguish between them. Perhaps this is not very surprising, seeing as the plots in Section \ref{sec:data} suggest that the two types of trees seem to grow at similar altidtudes, and also tend to keep the same horizontal distance to water. Furthermore, classes 3 and 6 look to be hard to predict. Looking at the table, the predictions of these two classes in particular show greater variability than the rest. 
+\noindent As is shown in the table, cover types 1 and 2 seem to be rather similar, and the model finds it difficult to distinguish between them. Perhaps this is not very surprising, seeing as the plots in Section \ref{sec:data} suggest that the two types of trees seem to grow at similar altitudes, and also tend to keep the same horizontal distance to water. Furthermore, classes 3 and 6 look to be hard to predict. Looking at the table, the predictions of these two classes in particular show greater variability than the rest. 
 
 Moving on, we will fit random forest models to the same data in order to see if we can generate better classification rates.
 
 
 \subsection{Random Forests}
-Looking at Figure \ref{fig:soil_elev}, we can see something that resembles clusters of different cover types. In the top right corner, for example, the dominating cover isof type 7. Also, trees of type 3 seem to be concentrated at the lower left portion of the figure. In other words, it looks as if elevation and soil type capture a significant share of the variation in cover types. Hence, we will begin by growing a random forest that uses only soil and elevation as features. The bivariate random forest model manages to classify about 70\% of the test observations correctly, and the confusion matrix of the model is given in Table \ref{tab:conf_reduced}.
+Looking at Figure \ref{fig:soil_elev}, we can see something that resembles clusters of different cover types. In the top right corner, for example, the dominating cover is of type 7. Also, trees of type 3 seem to be concentrated at the lower left portion of the figure. In other words, it looks as if elevation and soil type capture a significant share of the variation in cover types. Hence, we will begin by growing a random forest that uses only soil and elevation as features. The bivariate random forest model manages to classify about 70\% of the test observations correctly, and the confusion matrix of the model is given in Table \ref{tab:conf_reduced}.
 
 
 \begin{table}[ht]
@@ -474,14 +474,14 @@ The confusion matrix of the full random forest is shown in Table \ref{tab:conf_f
 
 \noindent In Section \ref{sec:exploration}, Figure \ref{fig:soil_elev} suggested that elevation and soil type might be the most important variables when it comes to classifying the cover types in our data set. Using the Gini index defined in Section \ref{sec:dec_tree}, we can compute how much each variable contributed to decreasing the variability on average. We present such a measure in Figure \ref{fig:importance}. Evidently, elevation and soil type are the two variables that provide the model with most of it predictive power.
 
-All in all, it looks as if the random forest is a suitable way of classifying the cover types of the different plots of land. We managed to find a model able of calssifying about 85\% of the test data cover types correctly without having to add too much complexity to the model itself. We think it is interesting to find the power of even the simplest form of random forest models, and so we feel encouraged and well convinced that machine learning in general -- and random forest in particular -- are indeed are very important tool in the world of data analysis.
+All in all, it looks as if the random forest is a suitable way of classifying the cover types of the different plots of land. We managed to find a model able of calssifying about 85\% of the test data cover types correctly without having to add too much complexity to the model itself. We think it is interesting to find the power of even the simplest form of random forest models, and so we feel encouraged and well convinced that machine learning in general, and random forests in particular, are indeed are very important tool in data analysis.
 
 <<importance, echo = FALSE, fig.cap = "Plot showing the mean decrease in Gini index generated by each feature. Elevation and soil type look to be by far the most important", fig.height = 5, fig.pos = "h!">>=
 imp %>%
   arrange(var) %>%
   ggplot(mapping = aes(x = gini, y = fct_reorder(var, gini))) +
   geom_point() +
-  labs(x = "Mean decrease in Gini index",
+  labs(x = "Mean Decrease in Gini index",
        y = "Variable") +
   scale_y_discrete(labels = c("Slope", "Afternoon Shade", "Noon Shade", 
                               "Aspect", "Vertical Water",
@@ -498,7 +498,7 @@ imp %>%
 \subsection{Logit Model}
 The multinomial logit model at its very simplest manages to classify 70\% of the test data cover types correctly, hence performing at a rate similar to that of the bivariate random forest. Looking at the confusion matrix shown in Table \ref{tab:conf_mult}, we see that the error sources seem to be the same as before, namely cover types 1, 2, 3, and 6.
 
-However, the fact we use all covariates available in the logit model, as opposed to only two in the bivariate forest, points to the power of the random forest as a classifying tool. Not only because it performs better, but also because it is not much harder to understand in any sense.
+However, the fact that we use all covariates available in the logit model, as opposed to only two in the bivariate forest, points to the power of the random forest as a classifying tool. Not only because it performs better, but also because it is not much harder to understand in any sense.
 
 
 \begin{table}[ht]
