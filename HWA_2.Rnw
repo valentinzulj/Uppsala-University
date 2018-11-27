@@ -1,0 +1,110 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{color}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage[a4paper, total={6in, 8.1in}]{geometry}
+\usepackage{bm}
+
+
+\title{Homework Assignment 2 -- Solutions}
+\author{Valentin Zulj}
+\date{}
+
+\begin{document}
+
+<<include = FALSE>>=
+opts_chunk$set(size = "footnotesize",
+  comment = NA,
+  background = "#E7E7E7",
+  prompt = FALSE)
+
+library(tidyverse)
+library(MASS)
+library(pscl)
+library(mediation)
+library(broom)
+count <- as.tibble(read.table("count_dat.txt", header = TRUE))
+count <- count %>%
+  mutate(binary = ifelse(Count == 0, 0, 1))
+@
+
+
+
+\maketitle
+
+\section{Applying and Interpreting Generalized Linear Models}
+\subsection{Logit and Probit}
+\subsubsection{Binary}
+<<include = FALSE>>=
+count <- count %>%
+  mutate(binary = ifelse(Count == 0, 0, 1))
+
+binary <- glm(binary ~ X1 + X2, family = binomial(link = "logit"), data = count)
+summary(binary)
+
+n <- 1000
+a <- matrix(1, nrow = n)
+b <- matrix(c(seq(-10, 10, length.out = 100)), nrow = n)
+c <- matrix(mean(count$X2), nrow = n)
+A <- cbind(a,b,c)
+
+B <- matrix(c(binary$coefficients), nrow = 3)
+            
+probs <- numeric(n)
+
+for(i in 1:n){
+  probs[i] <- (exp(A[i, ] %*% B)/(1 + exp(A[i, ] %*% B)))
+}
+@
+
+In this section, I run an ordinary logistic regression, using the \textit{logit} link function.The estimates, as well as the standard errors and p-values, of the logistic regression model are shown in Table \ref{tab:logit}.
+
+\begin{table}[ht]
+\centering
+  \begin{tabular}{ccccc}
+  \hline
+   & Estimate & Std. Error & $z$-value & $p$ \\ 
+  \hline
+  Intercept & 0.26  & 0.10 & 2.67  & 0.01 \\ 
+  $X_{1}$   & -0.60 & 0.10 & -5.84 & 0.00 \\ 
+  $X_{2}$   & -0.48 & 0.10 & -4.67 & 0.00 \\ 
+  \hline
+  \end{tabular}
+  \caption{Estimates made using logistic regression}
+  \label{tab:logit}
+  \end{table}
+  
+\noindent As can be seen $\beta_{1}$ -- which is the coefficient measuring the effect of $x_{1}$ on the response -- is strongly significant. Meaning that $X_{1}$ can be used to explain a significant share of the variability in the response variable. As for the probabilities, they can be calculated as
+
+  \begin{align} \label{eq:probs}
+  P\left(Y=1 | X_{1} = x_{1}, X_{2} = x_{2}\right) =\frac{\exp\left\{ \bm{X}_{1j} \bm{\beta}\right\}}{1   + \exp\left\{ \bm{X}_{1j} \bm{\beta}\right\}},
+  \end{align}
+
+\noindent where $\bm{X}$ is a matrix containing all covariates, and $\bm{\beta}$ is a vector containing the parameter estimates given in Table \ref{tab:logit}. In order to visualise the change in $P\left(Y=1 | X_{1} = x_{1}, X_{2} = x_{2}\right)$, I fix the value of $X_{2}$ at $\bar{x_{2}}$, and let $X_{1}$ vary on $[-10, 10]$. The different probabilities are shown in Figure \ref{fig:logit}. The figure cleary shows that the conditional probability does not behave in a linear manner, meaning that marginal effect of $X_{1}$ will be different depending what value $X_{1}$ actually takes. In this sense, the odd ratio is a somewhat more intuitive measure, seeing as it is what the model actually assumes to be linear. The odds ratio is defined as
+
+  \begin{align*}
+  OR = \exp \left\{ \left( \beta_{0} + \beta_{1}x_{1} + \beta_{2}x_{2}\right) - \left( \beta_{0} +       \beta_{1}x_{1}^{*} + \beta_{2}x_{2}\right) \right\},
+  \end{align*}
+
+\noindent where $x_{1}$ is given as the mean of $X_{1}$, while $x_{1}^{*}$ is the value found one standard deviation above that same mean. The odds ratio of this particular case is $0.539$, meaning that the odds of the $Y$ being equal to 1 decrease by roughly 46 \% when $X_{1}$ increases by one standard deviation. As opposed to the probabilites, this relationship will hold for all values in the domain of $X_{1}$.
+
+\newpage
+
+
+<<logit, echo = FALSE, fig.align = "center", fig.cap = "The curve shows how the probabilities of the response variable taking the value 1 behave when $X_{1}$ is allowed to vary while $X_{2}$ is kept constant.", fig.height = 3, fig.width = 4, fig.pos = "h!">>=
+ggplot(mapping = aes(x = b, y = probs)) + 
+  geom_line(color = "blue") +
+  labs(x = expression(X[1]),
+       y = "Probability")+
+  theme_classic()
+@
+
+
+
+
+
+
+
+\end{document}
