@@ -5,9 +5,9 @@ library(mediation)
 library(broom)
 library(xtable)
 
-                    #################################
-                    #### Apply and Interpret GLM ####
-                    #################################
+#################################
+#### Apply and Interpret GLM ####
+#################################
 count <- as.tibble(read.table("count_dat.txt", header = TRUE))
 
 #### Logit Model ####
@@ -24,14 +24,12 @@ c <- matrix(mean(count$X2), nrow = n)
 A <- cbind(a,b,c)
 
 B <- matrix(c(binary$coefficients), nrow = 3)
-            
+
 probs <- numeric(n)
 
 for(i in 1:n){
   probs[i] <- (exp(A[i, ] %*% B)/(1 + exp(A[i, ] %*% B)))
 }
-
-
 
 bin_plot <- ggplot(mapping = aes(x = b, y = probs)) + 
   geom_line(color = "blue") +
@@ -57,30 +55,55 @@ p <- pnorm(abs(ctable[, "t value"]), lower.tail = FALSE) * 2
 ctable <- cbind(ctable, "p value" = p)
 ctable         
 
-
+xtable(ctable, digits = c(5, 5, 5, 5, 5))
 #### Count ####
 count_mod <- glm(Count ~ X1 + X2, 
                  family = poisson(link = "log"), data = count) # Poisson Regression
 summary(count_mod)
 
+
 quasi_count_mod <- glm(Count ~ X1 + X2, 
-                 family = quasipoisson, data = count) # Poisson With Overdispersion
+                       family = quasipoisson, data = count) # Poisson With Overdispersion
 summary(quasi_count_mod)
 
 zi_count_mod <- zeroinfl(Count ~ X1 + X2|X1 + X2, 
                          data = count, dist = "poisson", EM = TRUE) # Zero Inflation Poissin
-summary(zi_count_mod)
+print(zi_count_mod)
+exp(coef(zi_count_mod)[2])/(1+exp(coef(zi_count_mod)[2]))
+
+count %>%
+  ggplot(mapping = aes(x = Count, y = X1)) +
+  geom_point(mapping = aes(alpha = 3), color = "blue") + 
+  labs(y = expression(X[1])) + 
+  guides(alpha = FALSE) +
+  theme_classic()
 
 
 
-
-                    #################################
-                    ####  Mediation & Moderation ####
-                    #################################
+#################################
+####  Mediation & Moderation ####
+#################################
 med <- as.tibble(read.table("med_dat.txt", header = TRUE))
-                 
+
 #### Moderation ####
-moderator <- lm(negtone ~ negexp, data = med)
-lm_mod <- lm(perform ~ dysfunc + negtone + negexp + negtone*negexp, data = med)
-moderator_model <- mediate(moderator, lm_mod, sims=500, treat="negexp", mediator="negtone")
-summary(moderator_model)
+moderator <- lm(perform ~ negexp*negtone + dysfunc, data = med)
+
+basic <-  lm(perform ~ negexp + negtone + dysfunc, data = med)
+n <- seq(min(med$negtone), max(med$negtone), length.out = 100)
+y1 <- matrix(mean(med$negexp), nrow = 100)
+y2 <- matrix(n, nrow = 100)
+y3 <- matrix(mean(med$dysfunc), nrow = 100)
+y4 <- matrix(y1*y2, nrow = 100)
+Y <- cbind(1,y1,y2,y3,y4)
+
+b1 <- matrix(basic$coefficients, nrow = 4)
+b2 <- matrix(moderator$coefficients, nrow = 5)
+
+u <- Y[,1:4] %*% b1
+v <- Y %*% b2
+
+ggplot() +
+  geom_line(mapping = aes(x = n, y = c(u), color = "Ordinary")) +
+  geom_line(mapping = aes(x = n, y = c(v), color = "Moderated")) +
+  labs(y = "Fitted Value", x = "Negtone") +
+  theme_classic()
