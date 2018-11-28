@@ -106,10 +106,17 @@ ggplot() +
   theme_classic()
 
 
-#### Moderation ####
+#### Mediation ####
 med_mod <- lm(negtone ~ dysfunc, data = med)
 out_mod <- lm(perform ~ negtone + dysfunc, data = med)
 mediator <- mediate(med_mod, out_mod, treat = "dysfunc", mediator = "negtone")
-summary(mediator\te)
+summary(mediator)
 
-
+#################################
+####     Missing Data and    ####   
+####   Multiple Imputations  ####
+#################################
+missing <- as.tibble(read.table("SEXDISC_missing.txt", header = TRUE))
+aggr_plot <- aggr(missing, col=c('navyblue','red'), numbers=TRUE,
+                  sortVars=TRUE, labels=names(data), cex.axis=.7, gap=3,
+                  ylab=c("Histogram of missing data","Pattern"))
