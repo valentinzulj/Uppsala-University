@@ -4,6 +4,11 @@ library(pscl)
 library(mediation)
 library(broom)
 library(xtable)
+library(VIM)
+library(naniar)
+library(gridExtra)
+library(mice)
+
 
 #################################
 #### Apply and Interpret GLM ####
@@ -116,7 +121,41 @@ summary(mediator)
 ####     Missing Data and    ####   
 ####   Multiple Imputations  ####
 #################################
-missing <- as.tibble(read.table("SEXDISC_missing.txt", header = TRUE))
-aggr_plot <- aggr(missing, col=c('navyblue','red'), numbers=TRUE,
-                  sortVars=TRUE, labels=names(data), cex.axis=.7, gap=3,
-                  ylab=c("Histogram of missing data","Pattern"))
+
+#### Applying mice ####
+count_missing <- as.tibble(read.table("count_dat_missing.txt", header = TRUE))
+
+na_count <- count_missing[!complete.cases(count_missing), ]
+ok_count <- count_missing[complete.cases(count_missing), ]
+
+na_outcome <- ggplot(data = na_count, mapping = aes(x = Count)) +
+  geom_histogram(binwidth = 1, fill = "white", color = "black") + 
+  labs(title = "Missing", y = NULL) +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"))
+
+ok_outcome <- ggplot(data = ok_count, mapping = aes(x = Count)) +
+  geom_histogram(binwidth = 1, fill = "white", color = "black") + 
+  labs(y = "Frequency", title = "Full") +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"))
+
+na_x2 <- ggplot(data = na_count, mapping = 
+                  aes(x = Count, y = X2))+
+  geom_point() +
+  labs(x = "Count", y = NULL) +
+  theme_classic()
+
+ok_x2 <- ggplot(data = ok_count, mapping = 
+                  aes(x = Count, y = X2))+
+  geom_point() +
+  labs(y = expression(X[2]), x = "Count") +
+  theme_classic()
+
+grid.arrange(ok_outcome, na_outcome, ok_x2, na_x2, ncol = 2)
+
+imps <- mice(count_missing, seed = 4419, printFlag = FALSE)
+summary(imps)
+
+fit <- with(imps, glm(Count ~ X1 + X2, family = poisson(link = log)))
+summary(pool(fit))
