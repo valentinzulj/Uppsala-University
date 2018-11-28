@@ -110,6 +110,6 @@ ggplot() +
 med_mod <- lm(negtone ~ dysfunc, data = med)
 out_mod <- lm(perform ~ negtone + dysfunc, data = med)
 mediator <- mediate(med_mod, out_mod, treat = "dysfunc", mediator = "negtone")
-summary(mediator)
+summary(mediator\te)
 
 
