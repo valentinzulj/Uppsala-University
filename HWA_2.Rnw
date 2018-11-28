@@ -9,7 +9,7 @@
 \usepackage{multicol}
 \usepackage{booktabs}
 \usepackage{graphicx}
-\usepackage[font=small,labelfont=bf]{caption}
+\usepackage[font={small, it},labelfont=bf]{caption}
 
 \title{Homework Assignment 2 -- Solutions}
 \author{Valentin Zulj}
@@ -259,7 +259,7 @@ In this section, I fit a moderation model studying the working performance of a 
 \end{table}
 
 
-\noindent The concept of using a moderator in linear modelling is perhaps best explained through visualisation. Hence, I create a plot visualising the effect of moderation. I fix the values of \textit{negexp} and \textit{dysfunc} at their respective means, and let \textit{negtone} vary on $\left[\min\left(\textit{negtone}\right), \max\left(\textit{negtone}\right) \right]$. Then, I fit a regression model without moderation and compute the fitted values using the coefficient estimates of both models. I then plot the fitted values in the same figure in order to compare the outcomes. The results are shown in figure \ref{fig:mod}.
+\noindent The concept of using a moderator in linear modelling is perhaps best explained through visualisation. Hence, I create a plot visualising the effect of moderation. I fix the values of \textit{negexp} and \textit{dysfunc} at their respective means, and let \textit{negtone} vary on $\left[\min\left(\textit{negtone}\right), \max\left(\textit{negtone}\right) \right]$. Then, I fit a regression model without moderation and compute the fitted values using the coefficient estimates of both models. I then plot the fitted values in the same figure in order to compare the outcomes. The results are shown in Figure \ref{fig:mod}.
 
 <<mod, echo = FALSE, fig.align = "center", fig.cap = "The figure illustrates the number of observations found in each category of the respobse variable", fig.height = 3, fig.width = 7, fig.pos = "h!">>=
 ggplot() +
@@ -272,7 +272,19 @@ ggplot() +
 \noindent As can be seen, the moderator dampens the effect of \textit{negtone} on \textit{perform}. Actually, Table \ref{tab:mod} that, in the moderated model, the standalone effect of \textit{negtone} is far from being significant. The interaction term, however, does seem to have a significant relationship with the response variable. The point of this is that \textit{negtone} does not have a direct effect on \textit{perform}, but rather only effects the response through the way in which it -- \textit{negtone} -- interacts with \textit{negexp}.
 
 
-\section{Mediation}
+\subsection{Mediation}
+In the mediation model, I want to examine the effect of \textit{dysfunc} on \textit{perform}. Obviously, the most intuitive way to do this is using linear regression. However, I also want to determine whether \textit{dysfunc} affects \textit{negtone} in a way which spills over to \textit{perform}. Hence, I use a set of linear equations, defined as
+  \begin{equation}
+  \left.\begin{aligned}
+    &\text{negtone} = \gamma_{0} + \gamma_{1} \cdot \text{dysfunc} \\
+    &\text{perform} = \beta_{0} + \beta_{1} \cdot \text{negtone} + \beta_{2} \cdot \text{dysfunc}
+  \end{aligned} \right\},
+  \end{equation}
+
+\noindent where the upper first equation controls the mediator effect, and the second is just the ordinary linear model. I run the \texttt{mediate} function using linear models based on the equations, and get the results displayed in Table \ref{tab:med}. The table shows that \textit{dysfunc} affects the response i significantly in two ways, both directly and also through the effect is has on \textit{negtone}, which leads to an indirect effect on the response. 
+
+However, the total effect -- or the combined effect of \textit{dysfunc} on \textit{perform} -- is not significant. This is rather intuitive, if the sign of the two effects are taken into account. Seeing as the mediated effect is negative, and the direct effect is positive, and since they are quite similar in size, they may well cancel each other out. This seems to be the case, and since it is so, the total effect of \textit{dysfunc} can not be shown to be significant.
+
 \begin{table}[ht]
 \centering
 \begin{tabular}{ccccc}
@@ -290,12 +302,12 @@ ggplot() +
 \end{table}
 
 
+\subsection{The Classic Paper}
 
 
+\section{Missing Data and Multiple Imputation}
 
-
-
-
+\subsection{Applying \texttt{mice} to Generalized Linear Models}
 
 
 
