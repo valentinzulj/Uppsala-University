@@ -8,8 +8,8 @@
 \usepackage{bm}
 \usepackage{multicol}
 \usepackage{booktabs}
-\usepackage{tikz}
 \usepackage{graphicx}
+\usepackage[font=small,labelfont=bf]{caption}
 
 \title{Homework Assignment 2 -- Solutions}
 \author{Valentin Zulj}
@@ -55,11 +55,8 @@ A <- cbind(a,b,c)
 
 B <- matrix(c(binary$coefficients), nrow = 3)
             
-probs <- numeric(n)
+probs <- c(exp(A %*% B))/(1 + c(exp(A %*% B)))
 
-for(i in 1:n){
-  probs[i] <- (exp(A[i, ] %*% B)/(1 + exp(A[i, ] %*% B)))
-}
 @
 
 In this section, I run an ordinary logistic regression, using the \textit{logit} link function.The estimates, as well as the standard errors and p-values, of the logistic regression model are shown in Table \ref{tab:logit}.
@@ -157,7 +154,7 @@ In this task, I fit a variety of regression models under the assumption that the
 \label{tab:pois}
 \end{table}
 
-The second model is a Poisson regression model which tries to take an assumed sense of overdispersion into account. In essence, overdispersion means that the variance of the response does not correspond to the theoretical variance suggested by the distribution assumption. In short, I assume that $Y_{i} \sim Po(\mu_{i})$, meaning that $\text{V}[Y_{i}] = \mu_{i}$. With overdispersion, however, $\text{V}[Y_{i}] > \mu_{i}$, and, because of this, the standard errors of the coefficient estimates need to be adjusted a bit. 
+\noindent The second model is a Poisson regression model which tries to take an assumed sense of overdispersion into account. In essence, overdispersion means that the variance of the response does not correspond to the theoretical variance suggested by the distribution assumption. In short, I assume that $Y_{i} \sim Po(\mu_{i})$, meaning that $\text{V}[Y_{i}] = \mu_{i}$. With overdispersion, however, $\text{V}[Y_{i}] > \mu_{i}$, and, because of this, the standard errors of the coefficient estimates need to be adjusted a bit. 
 
 So I fit a model using quasi-likelihood to try and account for the alleged oversispersion, and print the output in Table \ref{tab:quasi-pois}. Comparing Tables \ref{tab:quasi-pois} and \ref{tab:pois}, it is clear that nothing has changed in the column displaying the coefficient estimates. This is a natural outcome of the quasi-likelihood approach. The standard errors, however, are somewhat higher in in Table \ref{tab:quasi-pois}, which is a result of adding a dispersion parameter to model the excess variance shown by the observed response -- $y_{i}$.
 
@@ -176,7 +173,7 @@ So I fit a model using quasi-likelihood to try and account for the alleged overs
 \label{tab:quasi-pois}
 \end{table}
 
-Neither one of the above mentioned count models result in coefficient estimates that are actually significant, and hence, there is room for some extra troubleshooting. 
+\noindent Neither one of the above mentioned count models result in coefficient estimates that are actually significant, and hence, there is room for some extra troubleshooting. 
 
 Modelling count data, there is always a chance that a great part of the observations are clustered by some particular value of the response -- usually $0$. Plotting $X_{1}$ against the repsonse variable \textit{Count} yields Figure \ref{fig:infl}. The figure shows that observations for all values of $X_{1}$ seem to cluster around 0, suggesting that it might be suitable to use two different models for the data set at hand, with one being binary -- determining whether an observation belings to the \textit{zero class} or not -- and the other being an ordinary count regression. This way of modelling produces what is called a zero-inlfated model, and the output of my attempt at making one is shown in Table \ref{tab:z-count}.
 
@@ -262,7 +259,7 @@ In this section, I fit a moderation model studying the working performance of a 
 \end{table}
 
 
-The concept of using a moderator in linear modelling is perhaps best explained through visualisation. Hence, I create a plot visualising the effect of moderation. I fix the values of \textit{negexp} and \textit{dysfunc} at their respective means, and let \textit{negtone} vary on $\left[\min\left(\textit{negtone}\right), \max\left(\textit{negtone}\right) \right]$. Then, I fit a regression model without moderation and compute the fitted values using the coefficient estimates of both models. I then plot the fitted values in the same figure in order to compare the outcomes. The results are shown in figure \ref{fig:mod}.
+\noindent The concept of using a moderator in linear modelling is perhaps best explained through visualisation. Hence, I create a plot visualising the effect of moderation. I fix the values of \textit{negexp} and \textit{dysfunc} at their respective means, and let \textit{negtone} vary on $\left[\min\left(\textit{negtone}\right), \max\left(\textit{negtone}\right) \right]$. Then, I fit a regression model without moderation and compute the fitted values using the coefficient estimates of both models. I then plot the fitted values in the same figure in order to compare the outcomes. The results are shown in figure \ref{fig:mod}.
 
 <<mod, echo = FALSE, fig.align = "center", fig.cap = "The figure illustrates the number of observations found in each category of the respobse variable", fig.height = 3, fig.width = 7, fig.pos = "h!">>=
 ggplot() +
@@ -272,13 +269,61 @@ ggplot() +
   theme_classic()
 @
 
+\noindent As can be seen, the moderator dampens the effect of \textit{negtone} on \textit{perform}. Actually, Table \ref{tab:mod} that, in the moderated model, the standalone effect of \textit{negtone} is far from being significant. The interaction term, however, does seem to have a significant relationship with the response variable. The point of this is that \textit{negtone} does not have a direct effect on \textit{perform}, but rather only effects the response through the way in which it -- \textit{negtone} -- interacts with \textit{negexp}.
 
-
-
-
-  
 
 \section{Mediation}
+\begin{table}[ht]
+\centering
+\begin{tabular}{ccccc}
+  \hline
+  & Estimate & Lower & Upper & $p$ \\ 
+  \hline
+    ACME           & -0.324  & -0.568   & -0.12  & $<$2e-16  \\ 
+    ADE            &  0.443  &  0.110   &  0.79  & 0.006   \\ 
+    Total Effect   &  0.119  & -0.224   &  0.48  & 0.528   \\ 
+    Prop. Mediated & -1.080  & -22.247  &  19.30 & 0.528  \\
+   \hline
+\end{tabular}
+\caption{Estimates made using the mediator model. The columns named 'lower' and 'upper' give limits of the confidence intervals made for each estimate. ACME gives the average mediated effect, and ADE gives the average direct effect.}
+\label{tab:med}
+\end{table}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
