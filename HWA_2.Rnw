@@ -28,6 +28,9 @@ library(MASS)
 library(pscl)
 library(mediation)
 library(broom)
+library(VIM)
+library(naniar)
+library(gridExtra)
 count <- as.tibble(read.table("count_dat.txt", header = TRUE))
 count <- count %>%
   mutate(binary = ifelse(Count == 0, 0, 1))
@@ -304,41 +307,73 @@ However, the total effect -- or the combined effect of \textit{dysfunc} on \text
 
 \subsection{The Classic Paper}
 
+\newpage
 
 \section{Missing Data and Multiple Imputation}
 
 \subsection{Applying \texttt{mice} to Generalized Linear Models}
 
+<<include = FALSE>>=
+count_missing <- as.tibble(read.table("count_dat_missing.txt", header = TRUE))
+
+na_count <- count_missing[!complete.cases(count_missing), ]
+ok_count <- count_missing[complete.cases(count_missing), ]
+
+na_outcome <- ggplot(data = na_count, mapping = aes(x = Count)) +
+  geom_histogram(binwidth = 1, fill = "white", color = "black") + 
+  labs(title = "Missing", y = NULL) +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"))
+
+ok_outcome <- ggplot(data = ok_count, mapping = aes(x = Count)) +
+  geom_histogram(binwidth = 1, fill = "white", color = "black") + 
+  labs(y = "Frequency", title = "Full") +
+  theme_classic() +
+  theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"))
+
+na_x2 <- ggplot(data = na_count, mapping = 
+                  aes(x = Count, y = X2))+
+  geom_point() +
+  labs(x = "Count", y = NULL) +
+  theme_classic()
+
+ok_x2 <- ggplot(data = ok_count, mapping = 
+                  aes(x = Count, y = X2))+
+  geom_point() +
+  labs(y = expression(X[2]), x = "Count") +
+  theme_classic()
+
+@
+
+In this task, I work with the \texttt{SEXDISC} data set. The data consits of four different variables, one of which contains missing values. In order to determine the extent -- and the type -- of the missingness, I make a series of plots that show how the \texttt{NA} terms are distributed across the variables. The illustrations of missingness is displayed in Figure \ref{fig:missing}.
+
+<<missing, echo = FALSE, fig.align = "center", fig.cap = "Plots illustrating the missingness in the data set", message = FALSE, fig.height = 4, fig.pos = "h!">>=
+grid.arrange(ok_outcome, na_outcome, ok_x2, na_x2, ncol = 2)
+@
+
+\noindent The data set conatins missing values in the $X_{1}$ variable, so I divide the data set into two, on where all values of $X_{1}$ are observed, and one where they are missing. Hence, the left hand side of Figure \ref{fig:missing} shows the data set where all variables have been observed, and the right hand side shows the subset where $X_{1}$ is missing.
+
+Looking at the figure, there are two things that come to mind. First, the missingness does not seem to have a great impact on the distribution of the outcome -- if any at all. In the first row, the response -- \textit{Count} -- has been gathered into histograms. It seems the distribution is roughly the same, with the frequence decreasing exponentially as the count increases. This indicates that the values of $X_{1}$ might be missing at random.
+
+In order to handle data that is missing at random, there has to be a relationship between the missingness and one of the other covariates, so that the latter can be use to model the missing values. The second row of the figure suggests that might be the case, since the missing values seem to occur predominantly at higher values of $X_{2}$. Further, the second row also suggests that there is no relationship between the outcome and the missingness, since the missingness seems to be relaticely spread out across the \textit{Count} variable. Because of this, I would say that the values of $X_{1}$ are likely to be missing at random.
+
+To handle the missingness, I use the \texttt{mice} package in order to impute the missing data points, creating 5 different imputed data sets. After that, I fit Poisson regression models to each data set, and combine the estimates of each models through pooling. The outcome of the modelling is shown in Table \ref{tab:imp}. As can be seen, $X_{1}$ is not good for explaining any share of the variation in the response, seeing as its coefficient is not significant -- and very far from being so at all.
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{cccccc}
+  \hline
+  & Estimate & Std. Error & Statistic & df & $p$ \\ 
+  \hline
+  Intercept &  0.49 & 0.04 & 13.91 & 494.50 & 0.00 \\ 
+  $X_{1}$   &  0.04 & 0.04 & 0.92 & 127.41 & 0.36  \\ 
+  $X_{2}$   & -0.05 & 0.04 & -1.46 & 488.59 & 0.14  \\ 
+  \hline
+\end{tabular}
+\caption{Table of estimates made using Poisson regression on the imputed data sets}
+\label{tab:imp}
+\end{table}
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
 \end{document}
+
