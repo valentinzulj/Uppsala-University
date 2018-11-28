@@ -25,13 +25,10 @@ A <- cbind(a,b,c)
 
 B <- matrix(c(binary$coefficients), nrow = 3)
 
-probs <- numeric(n)
+probs <- c(exp(A %*% B))/(1 + c(exp(A %*% B)))
 
-for(i in 1:n){
-  probs[i] <- (exp(A[i, ] %*% B)/(1 + exp(A[i, ] %*% B)))
-}
 
-bin_plot <- ggplot(mapping = aes(x = b, y = probs)) + 
+bin_plot <- ggplot(mapping = aes(x = b, y = p1)) + 
   geom_line(color = "blue") +
   labs(x = expression(X[1]),
        y = "Probability")+
@@ -107,3 +104,12 @@ ggplot() +
   geom_line(mapping = aes(x = n, y = c(v), color = "Moderated")) +
   labs(y = "Fitted Value", x = "Negtone") +
   theme_classic()
+
+
+#### Moderation ####
+med_mod <- lm(negtone ~ dysfunc, data = med)
+out_mod <- lm(perform ~ negtone + dysfunc, data = med)
+mediator <- mediate(med_mod, out_mod, treat = "dysfunc", mediator = "negtone")
+summary(mediator)
+
+
