@@ -10,6 +10,7 @@
 \usepackage{booktabs}
 \usepackage{graphicx}
 \usepackage[font={small, it},labelfont=bf]{caption}
+\usepackage{float}
 
 \title{Homework Assignment 2 -- Solutions}
 \author{Valentin Zulj}
@@ -62,7 +63,7 @@ probs <- c(exp(A %*% B))/(1 + c(exp(A %*% B)))
 
 @
 
-In this section, I run an ordinary logistic regression, using the \textit{logit} link function.The estimates, as well as the standard errors and p-values, of the logistic regression model are shown in Table \ref{tab:logit}.
+In this section, I run an ordinary logistic regression, using the \textit{logit} link function. The estimates, as well as the standard errors and p-values, of the logistic regression model are shown in Table \ref{tab:logit}.
 
 \begin{table}[ht]
 \centering
@@ -117,7 +118,7 @@ ctable
 
 In this task, I fit an ordered-categorical model to the \texttt{count} data set, using \textit{Count} as my response variable, and both $X_{1}$ and $X_{2}$ as covariates. The model output is shown in Table \ref{tab:order-cat} and, as can be seen from the $p$-value column, the coefficient of $X_{1}$ is strongly significant, meaning that it does indeed help in explaining the the variation of the response variable. The response, however, is modeled using the \textit{logit} link, and hence the coefficient of $X_{1}$ means that a one unit increase of the covariate will correspond to a decrease of $0.023$ in the log-odds value of the response. 
 
-Further, the funny looking coefficents are estimates of the change in intercept that is acquired when moving from one category of the response to another. They all show very strong significance, meaning that there are in fact differences in the starting levels of the different categories. Of course, each category will have such an estimate, but I only report the first few in order to save some space. The rest can be found by running the code given in the \texttt{.R} appendix file.
+Further, the funny looking coefficents at the bottom of the table are estimates of the change in intercept that is acquired when moving from one category of the response to another. They all show very strong significance, meaning that there are in fact differences in the starting levels of the different categories. Of course, each category will have such an estimate, but I only report the first few in order to save some space. The rest can be found by running the code given in the \texttt{.R} appendix file.
 
 
 \begin{table}[ht]
@@ -157,7 +158,7 @@ In this task, I fit a variety of regression models under the assumption that the
 
 \noindent The second model is a Poisson regression model which tries to take an assumed sense of overdispersion into account. In essence, overdispersion means that the variance of the response does not correspond to the theoretical variance suggested by the distribution assumption. In short, I assume that $Y_{i} \sim Po(\mu_{i})$, meaning that $\text{V}[Y_{i}] = \mu_{i}$. With overdispersion, however, $\text{V}[Y_{i}] > \mu_{i}$, and, because of this, the standard errors of the coefficient estimates need to be adjusted a bit. 
 
-So I fit a model using quasi-likelihood to try and account for the alleged oversispersion, and print the output in Table \ref{tab:quasi-pois}. Comparing Tables \ref{tab:quasi-pois} and \ref{tab:pois}, it is clear that nothing has changed in the column displaying the coefficient estimates. This is a natural outcome of the quasi-likelihood approach. The standard errors, however, are somewhat higher in in Table \ref{tab:quasi-pois}, which is a result of adding a dispersion parameter to model the excess variance shown by the observed response -- $y_{i}$.
+So I fit a model using quasi-likelihood to try and account for the alleged oversispersion, and print the output in Table \ref{tab:quasi-pois}. Comparing Tables  \ref{tab:pois} and \ref{tab:quasi-pois}, it is clear that nothing has changed in the column displaying the coefficient estimates. This is a natural outcome of the quasi-likelihood approach. The standard errors, however, are somewhat higher in in Table \ref{tab:quasi-pois}, which is a result of adding a dispersion parameter to model the excess variance shown by the observed response -- $y_{i}$.
 
 \begin{table}[ht]
 \centering
@@ -176,7 +177,7 @@ So I fit a model using quasi-likelihood to try and account for the alleged overs
 
 \noindent Neither one of the above mentioned count models result in coefficient estimates that are actually significant, and hence, there is room for some extra troubleshooting. 
 
-Modelling count data, there is always a chance that a great part of the observations are clustered by some particular value of the response -- usually $0$. Plotting $X_{1}$ against the repsonse variable \textit{Count} yields Figure \ref{fig:infl}. The figure shows that observations for all values of $X_{1}$ seem to cluster around 0, suggesting that it might be suitable to use two different models for the data set at hand, with one being binary -- determining whether an observation belings to the \textit{zero class} or not -- and the other being an ordinary count regression. This way of modelling produces what is called a zero-inlfated model, and the output of my attempt at making one is shown in Table \ref{tab:z-count}.
+Modelling count data, there is always a chance that a great part of the observations are clustered by some particular value of the response -- usually $0$. Plotting $X_{1}$ against the repsonse variable \textit{Count} yields Figure \ref{fig:infl}. The figure shows that observations for all values of $X_{1}$ seem to cluster around 0, suggesting that it might be suitable to use two different models for the data set at hand, with one being binary -- determining whether an observation belongs to the \textit{zero class} or not -- and the other being an ordinary count regression. This way of modelling produces what is called a zero-inlfated model, and the output of my attempt at making one is shown in Table \ref{tab:z-count}.
 
 \begin{table}[ht]
 \centering
@@ -207,7 +208,7 @@ count %>%
   theme_classic()
 @
 
-Looking at the table, it is clear that the coefficient of $X_{1}$ is significantly positive in both models. The count model states that higher values of $X_{1}$ tend to give higher values of the response variable. The zero model models the log-odds that each response follows a degenerate distribution at zero. Hence, plugging the estimates into Equation \ref{eq:probs}, we find the conditional probability that observation $i$ will always have a response of value 0. Again, I fix the value of $X_{2}$ at $\bar{x}_{2}$, and evaluate Equation \ref{eq:probs} using 
+\noindent Looking at the table, it is clear that the coefficient of $X_{1}$ is significantly positive in both models. The count model states that higher values of $X_{1}$ tend to give higher values of the response variable. The zero model models the log-odds that each response follows a degenerate distribution at zero. Hence, plugging the estimates into Equation \ref{eq:probs}, we find the conditional probability that observation $i$ will always have a response of value 0. Again, I fix the value of $X_{2}$ at $\bar{x}_{2}$, and evaluate Equation \ref{eq:probs} using 
     \begin{align*}
       \bm{X}_{1} = \left(1, \; \bar{x}_{1}, \; \bar{x}_{2} \right) \ \text{and} \ \bm{X}_{2} =          \left(1, \; \bar{x}_{1} + \hat{\sigma}_{X_{1}}, \; \bar{x}_{2} \right),
     \end{align*}
@@ -254,7 +255,7 @@ In this section, I fit a moderation model studying the working performance of a 
 \noindent to model the relationship between the response and the covariates, meaning that the interaction term -- $ \text{negexp}   \cdot \text{negtone} $ -- will be the moderator. Fitting the above mentioned model to the data set yields the results shown in Table \ref{tab:mod}.
 
 
-\begin{table}
+\begin{table}[h!]
 \centering
 \begin{tabular}{ccccc}
   \hline
@@ -263,7 +264,7 @@ In this section, I fit a moderation model studying the working performance of a 
   Intercept   & -0.0119 & 0.0585 & -0.20 & 0.8399 \\ 
   negexp      & -0.0192 & 0.1174 & -0.16 & 0.8708 \\ 
   negtone     & -0.4357 & 0.1306 & -3.34 & 0.0015 \\ 
-  dysfunc     &  0.3661 & 0.1778 & 2.06 & 0.0443 \\ 
+  dysfunc     &  0.3661 & 0.1778 & 2.06  & 0.0443 \\ 
   Interaction & -0.5170 & 0.2409 & -2.15 & 0.0363 \\ 
    \hline
 \end{tabular}
@@ -308,7 +309,7 @@ In the mediation model, I want to examine the effect of \textit{dysfunc} on \tex
 
 \noindent where the upper equation controls the mediator effect, and the second is just the ordinary linear model. I run the \texttt{mediate} function using linear models based on the equations, and get the results displayed in Table \ref{tab:med}. The table shows that \textit{dysfunc} affects the response of observation $i$ significantly in two ways, both directly and also through the effect is has on \textit{negtone}, which leads to an indirect effect on the response. 
 
-However, the total effect -- or the combined effect of \textit{dysfunc} on \textit{perform} -- is not significant. This is rather intuitive, if the sign of the two effects are taken into account. Seeing as the mediated effect is negative, and the direct effect is positive, and since they are quite similar in size, they may well cancel each other out. This seems to be the case, and since it is so, the total effect of \textit{dysfunc} can not be shown to be significant.
+However, the total effect -- or the combined effect of \textit{dysfunc} on \textit{perform} -- is not significant. This is rather intuitive, if the signs of the two effects are taken into account. Seeing as the mediated effect is negative, and the direct effect is positive, and since they are quite similar in size, they may well cancel each other out. This seems to be the case, and since it is so, the total effect of \textit{dysfunc} can not be shown to be significant.
 
 \begin{table}[ht]
 \centering
@@ -330,9 +331,9 @@ However, the total effect -- or the combined effect of \textit{dysfunc} on \text
 \subsection{The Classic Paper}
 The paper seems to be focused on highlighting the differences between mediating and moderating effects within statistical analysis, and manages to do that quite simply and intuitively. In essence, I would say that a mediating variable induces some other variable to have an effect on the response, while a moderator manages the strength and direction of the effect that some variable has on the response.
 
-Consider the act of throwing food in the trash can, and think of the amount of food waste produced as a response variable. Now, imagine that you are about to enter your local supermarket to do your weekly grocery shopping. Of course, the amount of food you can throw away is governed by the amount of food that you buy. Further, think of a binary variable taking value 1 if you are hungry, and 0 of you are not. People often say that you shouldn't go shopping for food if you are hungry, since this will lead you to buy things that you have no use of. In this sense, hunger could be seen as a mediating variable, since it is thought to affect the way in which you behave at the store, which could eventually impact how much food you throw away.
+Consider the act of throwing food in the trash can, and think of the amount of food waste produced as a response variable. Now, imagine that you are about to enter your local supermarket to do your weekly grocery shopping. Of course, the amount of food you can throw away is governed by the amount of food that you buy. Further, think of a binary variable taking value 1 if you are hungry, and 0 of you are not. People often say that you should not go shopping for food if you are hungry, since it will lead you to buy things that you have no real use of. In this sense, hunger could be seen as a mediating variable, since it is thought to affect the way in which you behave at the store, which could eventually impact how much food you throw away.
 
-A moderating effect, on the other hand, could be found by studying your schedule. If you are incredibly busy, and you have lots of extracurricular activities going on, you might not have time to make use of all the food you have bought. In that sense, 'busyness' can be thought to moderate how much of the food you buy that will eventually end up in the bin.
+A moderating effect, on the other hand, could be found by studying your schedule. If you are incredibly busy, and you have lots of extracurricular activities going on, you might not have time to make use of all the food you have bought. In that sense, your level of non-cooking activity can be thought to moderate how much of the food you buy that will eventually end up in the bin.
 
 \section{Missing Data and Multiple Imputation}
 
@@ -370,17 +371,17 @@ ok_x2 <- ggplot(data = ok_count, mapping =
 
 @
 
-In this task, I work with the \texttt{SEXDISC} data set. The data consists of four different variables, one of which contains missing values. In order to determine the extent -- and the type -- of the missingness, I make a series of plots that show how the \texttt{NA} terms are distributed across the variables. The illustration of missingness is displayed in Figure \ref{fig:missing}.
+In this task, I work with a new data set. The data consists of three different variables, one of which contains missing values. In order to determine the extent -- and the type -- of the missingness, I make a series of plots that show how the \texttt{NA} terms are distributed across the variables. The illustration of missingness is displayed in Figure \ref{fig:missing}.
 
 <<missing, echo = FALSE, fig.align = "center", fig.cap = "Plots illustrating the missingness in the data set", message = FALSE, fig.height = 4, fig.pos = "h!">>=
 grid.arrange(ok_outcome, na_outcome, ok_x2, na_x2, ncol = 2)
 @
 
-\noindent The data set conatins missing values in the $X_{1}$ variable, so I divide the data set into two, on where all values of $X_{1}$ are observed, and one where they are missing. Hence, the left hand side of Figure \ref{fig:missing} shows the data set where all variables have been observed, and the right hand side shows the subset where $X_{1}$ is missing.
+\noindent The data set conatins missing values in the $X_{1}$ variable, so I divide the data set into two, one where all values of $X_{1}$ are observed, and one where they are missing. Hence, the left hand side of Figure \ref{fig:missing} shows the data set where all variables have been observed, and the right hand side shows the subset where $X_{1}$ is missing.
 
 Looking at the figure, there are two things that come to mind. First, the missingness does not seem to have a great impact on the distribution of the outcome -- if any at all. In the first row, the response -- \textit{Count} -- has been gathered into histograms. It seems the distribution is roughly the same, with the frequency decreasing exponentially as the count increases. This indicates that the values of $X_{1}$ might be missing at random.
 
-In order to handle data that is missing at random, there has to be a relationship between the missingness and one of the other covariates, so that the latter can be use to model the missing values. The second row of the figure suggests that might be the case, since the missing values seem to occur predominantly at higher values of $X_{2}$. Further, the second row also suggests that there is no relationship between the outcome and the missingness, since the missingness seems to be relatively spread out across the \textit{Count} variable. Because of this, I would say that the values of $X_{1}$ are likely to be missing at random.
+In order to handle data that is missing at random, there has to be a relationship between the missingness and one of the other covariates, so that the latter can be used to model the missing values. The second row of the figure suggests that might be the case, since the missing values seem to occur predominantly at higher values of $X_{2}$, meaning that the information stored in $X_{2}$ might be used to tackle the missingness. Further, the second row also suggests that there is no relationship between the outcome and the missingness, since the missingness seems to be relatively spread out across the \textit{Count} variable. Because of this, I would say that the values of $X_{1}$ are likely to be missing at random.
 
 To handle the missingness, I use the \texttt{mice} package in order to impute the missing data points, creating 5 different imputed data sets. After that, I fit Poisson regression models to each data set, and combine the estimates of each model through pooling. The outcome of the modelling is shown in Table \ref{tab:imp}. As can be seen, $X_{1}$ is not very good for explaining any share of the variation in the response, seeing as its coefficient is not significant -- and very far from being so at all.
 
@@ -400,7 +401,7 @@ To handle the missingness, I use the \texttt{mice} package in order to impute th
 \end{table}
 
 \section{Multiple Imputation for a Regression Model}
-In this section, I will use another data set containing missing values, impute the missingness, and fit regression models to the imputed data sets. However, I will write my own function to fit the linear regressions and pool the variances, and not use the \texttt{mice} package. I write a function called \texttt{rubin}, and use it to compute the estimates given in Table \ref{tab:rub}. The contents of the table are identical to the output renderd using \texttt{mice} -- as in the previous task.
+In this section, I will use another data set containing missing values, impute the missingness, and fit regression models to the imputed data sets. However, I will write my own function to fit the linear regressions and pool the variances, and not use the \texttt{mice} package. I write a function called \texttt{rubin}, and use it to compute the estimates given in Table \ref{tab:rub}. The contents of the table are identical to the output renderd using \texttt{mice} -- using the same approach as in the previous task.
 
 \begin{table}[ht]
 \centering
@@ -422,12 +423,12 @@ In this section, I will use another data set containing missing values, impute t
 
 \section{A Classification of Data Science Tasks}
 
-I like to think of statistical modelling in terms of what questions I want to answer using the statistical analysis I am about to perform, because I believe that the distinction between prediction and inference significantly reduces the number of ways in which I can approach any given task. Also, I believe that an important question to ask is whether I -- using only my statistics training an no other input -- can give a meaningful answer to the question at hand.
+I like to think of statistical modelling in terms of what questions I want to answer using the statistical analysis I am about to perform, because I believe that the distinction between prediction and inference significantly reduces the number of ways in which I can approach any given task. Also, I believe that an important question to ask is whether I -- using only my statistics training and no other input -- can give a meaningful answer to the question at hand.
 
-Think of it like this: a stock broker walks into your office and asks you what price a share of company so-and-so will have exactly a week from now. Can you answer that question? Sure. Or at least answer-ish. You simply build a model using data regarding the previous prices of the stock, perhaps you use the interest rates or oil prices or whatever, and so you can make a qualified guess. Point being it does not really matter how you do it, as long as you make a good enough prediction, the stock broker will happily give you a share of his profits.
+Think of it like this: a stock broker walks into your office and asks you what price a share of company so-and-so will have exactly a week from now. Can you answer that question? Sure. Or at least answer-ish. You simply build a model using data regarding the previous prices of the stock, perhaps you use the interest rates or oil prices or whatever, and so you can make a qualified guess. Point being it does not really matter how you do it. As long as you make a good enough prediction, the stock broker will happily give you a -- probably very small -- share of his profits.
 
 Now, suppose you want to determine what effect interpersonal trust has on voter turnout during election day. Could you answer that question all by yourself, given that you have only a data set and no other knowledge? Probably not. You would need to consult a political scientist, and perhaps somebody working in sociology or psychology. Using data to make statements regarding causal relationships is a complex issue, and there always has to be some sort of motivation as to why a variable is controlled for, or excluded or deemed irrelevant. That, I would say, is the main difference between predictive and inferential modelling.
 
-With reference to the discussion above, I would say that it is \textit{always} important to distinguish between prediction and inference, seeing as they are two separate forms of statistical analysis. From that particular point of view, I think this course has been really interesting. Looking at the table shown at the very end of the paper, I see that regression has been given as an analytic tool that can be used for both inference \textit{and} predictions. Thinking about that for a while, I end right where I left of: what sort of question do I want to answer? Or perhaps something more heuristic -- am I interested in $\hat{\bm{\beta}}$ or $\hat{\bm{y}}$? For the former, causal inference is probably the thing, and for the latter, predictive modelling is likely to be the most suitable approach.
+With reference to the discussion above, I would say that it is \textit{always} important to distinguish between prediction and inference, seeing as they are two separate forms of statistical analysis. From that particular point of view, I think this course has been really interesting. Looking at the table shown at the very end of the paper, I see that regression has been given as an analytic tool that can be used for both inference \textit{and} predictions. Thinking about that for a while, I end right where I started out: what sort of question do I want to answer? Or perhaps something more heuristic -- am I interested in $\hat{\bm{\beta}}$ or $\hat{\bm{y}}$? For the former, causal inference is probably the thing, and for the latter, predictive modelling is likely to be the most suitable approach.
 
 \end{document}
