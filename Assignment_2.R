@@ -211,3 +211,4 @@ rubin(imp_sex_long) # Estimates
 
 f <- with(imp_sex, lm(liking ~ sexism + approp + factor(protest)))
 summary(pool(f))    # Comparing with mice 
+
