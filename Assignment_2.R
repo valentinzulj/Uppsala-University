@@ -33,7 +33,7 @@ B <- matrix(c(binary$coefficients), nrow = 3)
 probs <- c(exp(A %*% B))/(1 + c(exp(A %*% B)))
 
 
-bin_plot <- ggplot(mapping = aes(x = b, y = p1)) + 
+bin_plot <- ggplot(mapping = aes(x = b, y = probs)) + 
   geom_line(color = "blue") +
   labs(x = expression(X[1]),
        y = "Probability")+
@@ -70,8 +70,14 @@ summary(quasi_count_mod)
 
 zi_count_mod <- zeroinfl(Count ~ X1 + X2|X1 + X2, 
                          data = count, dist = "poisson", EM = TRUE) # Zero Inflation Poissin
-print(zi_count_mod)
-exp(coef(zi_count_mod)[2])/(1+exp(coef(zi_count_mod)[2]))
+summary(zi_count_mod)
+
+zi_beta <- matrix(c(zi_count_mod$coefficients$zero), ncol = 1)
+x1 <- matrix(c(1, mean(count$X1), mean(count$X2)), nrow = 1)
+x2 <- matrix(c(1, mean(count$X1) + sd(count$X1), mean(count$X2)), nrow = 1)
+
+exp(x1 %*% zi_beta)/(1+exp(x1 %*% zi_beta))
+exp(x2 %*% zi_beta)/(1+exp(x2 %*% zi_beta))
 
 count %>%
   ggplot(mapping = aes(x = Count, y = X1)) +
@@ -159,3 +165,49 @@ summary(imps)
 
 fit <- with(imps, glm(Count ~ X1 + X2, family = poisson(link = log)))
 summary(pool(fit))
+
+
+#### Multiple Imputation for Regression ####
+missing_sex <- as.tibble(read.table("SEXDISC_missing.txt"
+                                    , header = TRUE))
+imp_sex <- mice(missing_sex, seed = 666, printFlag = FALSE)
+imp_sex_long <- complete(imp_sex, action = "long")
+
+rubin <- function(data){
+  data <- subset(data, select = -.id)                            # Removing id col
+  v_cov <- array(NA, dim = c((ncol(data) - 1), (ncol(data) - 1),
+                             length(unique(data$.imp))))         # Preallocation
+  beta <- matrix(NA, ncol = length(unique(data$.imp)),
+                 nrow = (ncol(data) - 1))                        # Preallocation
+  for(i in unique(data$.imp)){
+    d <- data %>%
+      filter(.imp == i)
+    mod <- lm(liking ~ sexism + approp + factor(protest), data = d)
+    v_cov[, , i] <- diag(vcov(mod))
+    beta[, i] <- mod$coefficients
+  }                               # Beta & vcov
+  beta_bar_m <- rowMeans(beta)                                   # Beta mean
+  B_mat <- array(NA, dim = c((ncol(data) - 1), (ncol(data) - 1), 
+                             length(unique(data$.imp))))         # Preallocation
+  B_m <- matrix(0, nrow = (ncol(data) - 1), 
+                ncol = (ncol(data) - 1))                         # Preallocation
+  v_sum <- matrix(0, nrow = (ncol(data) - 1), 
+                  ncol = (ncol(data) - 1))                       # Preallocation  
+  for(i in unique(data$.imp)){                                   # Variance loop  
+    B_mat[, , i] <- crossprod(t((beta[, i] - beta_bar_m)))
+    B_m <- B_m + B_mat[, , i]
+    v_sum <- v_sum + v_cov[, , i]
+  }
+  B <- (1/(ncol(data) - 1))*B_m                                  # B matrix
+  V <- (1/length(unique(data$.imp)))*v_sum                       # Sigma sum
+  sigma_b_bar <- V + (1+(1/length(unique(data$.imp))))*B         # Pooled var
+  s_err <- sqrt(diag(sigma_b_bar))                               # Std. Errors
+  out <- cbind(beta_bar_m, s_err)                                # Output matrix
+  colnames(out) <- c("Estimate", "Std. Error")
+  return(out)
+} 
+# Note that imput needs to be the "long" output of complete(<mice object>)
+rubin(imp_sex_long) # Estimates
+
+f <- with(imp_sex, lm(liking ~ sexism + approp + factor(protest)))
+summary(pool(f))    # Comparing with mice 
