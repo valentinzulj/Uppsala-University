@@ -1,0 +1,201 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage[a4paper, total={6in, 8.1in}]{geometry}
+
+\title{Homework 1}
+\author{Valentin Zulj}
+\date{}
+
+\begin{document}
+
+<<include = FALSE>>=
+library(tidyverse)
+sate_homo <- as.tibble(read.csv("sate_homo.csv", header = TRUE))
+sate_hetero <- as.tibble(read.csv("sate_hetero.csv", header = TRUE))
+
+pate_homo <- as.tibble(read.csv("pate_homo.csv", header = TRUE))
+pate_hetero <- as.tibble(read.csv("pate_hetero.csv", header = TRUE))
+
+pate_hetero_tau <- ggplot(data = pate_hetero, mapping = aes(alpha = 0.3)) +
+  geom_density(mapping = aes(x = V5, fill = "300")) +
+  geom_density(mapping = aes(x = V3, fill = "200")) +
+  geom_density(mapping = aes(x = V1, fill = "100")) +
+  labs(y = "Density", x = expression(hat(tau))) +
+  theme_classic() +
+  scale_fill_manual(name = "Sample Size",values = c("100" = "red","200" = "blue", "300" = "green")) +
+  guides(alpha = FALSE)
+  
+pate_hetero_beta <- ggplot(data = pate_hetero, mapping = aes(alpha = 0.3)) +
+  geom_density(mapping = aes(x = V6, fill = "300")) +
+  geom_density(mapping = aes(x = V4, fill = "200")) +
+  geom_density(mapping = aes(x = V2, fill = "100")) +
+  labs(y = "Density", x = expression(hat(beta))) +
+  theme_classic() +
+  scale_fill_manual(name = "Sample Size",values = c("100" = "red","200" = "blue", "300" = "green")) +
+  guides(alpha = FALSE)
+
+
+@
+
+\maketitle
+
+\section{Estimating The Sample Average Treatment Effect}
+\begin{table}[ht]
+\centering
+\begin{tabular}{ccccccccc}
+  \hline
+  & \multicolumn{4}{ c }{Homogenous} & \multicolumn{4}{ c }{Heterogeneous} \\
+  \cmidrule(lr){2-5}
+  \cmidrule(lr){6-9}
+  & \multicolumn{2}{ c }{$\hat{\tau}$} & \multicolumn{2}{ c }{$\hat{\beta}$} & \multicolumn{2}{ c }{$\hat{\tau}$} & \multicolumn{2}{ c }{$\hat{\beta}$} \\
+  \cmidrule(lr){2-3}
+  \cmidrule(lr){4-5}
+  \cmidrule(lr){6-7}
+  \cmidrule(lr){8-9}
+ $n$ & Mean & SD & Mean & SD & Mean & SD & Mean & SD\\ 
+  \hline
+  100 & 1.998 & 0.1995 & 1.998 & 0.1995 & 1.9978 & 0.34689 & 1.9978 & 0.34689 \\ 
+  200 & 2.0004 & 0.14497 & 2.0004 & 0.14497 & 2.0005 & 0.2413 & 2.0005 & 0.2413 \\ 
+  300 & 1.999 & 0.1168 & 1.999 & 0.1168 & 2.0027 & 0.20158 & 2.0027 & 0.20158 \\ 
+   \hline
+\end{tabular}
+\caption{Estimates of treatment effect made using Monte Carlo simulations with 10,000 iterations each.}
+\label{tab:sate}
+\end{table}
+
+\section{Estimating The Population Average Treatment Effect}
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{ccccccccc}
+  \hline
+  & \multicolumn{4}{ c }{Homogenous} & \multicolumn{4}{ c }{Heterogeneous} \\
+  \cmidrule(lr){2-5}
+  \cmidrule(lr){6-9}
+  & \multicolumn{2}{ c }{$\hat{\tau}$} & \multicolumn{2}{ c }{$\hat{\beta}$} & \multicolumn{2}{ c }{$\hat{\tau}$} & \multicolumn{2}{ c }{$\hat{\beta}$} \\
+  \cmidrule(lr){2-3}
+  \cmidrule(lr){4-5}
+  \cmidrule(lr){6-7}
+  \cmidrule(lr){8-9}
+ $n$ & Mean & SD & Mean & SD & Mean & SD & Mean & SD\\ 
+  \hline
+  100 & 2.001 & 0.19989 & 2.001 & 0.19989 & 1.9942 & 0.34153 & 1.9942 & 0.34153 \\ 
+  200 & 1.9997 & 0.1421 & 1.9997 & 0.1421 & 1.9997 & 0.2445 & 1.9997 & 0.2445 \\ 
+  300 & 2 & 0.11682 & 2 & 0.11682 & 2 & 0.2001 & 2 & 0.2001 \\ 
+   \hline
+\end{tabular}
+\caption{Estimates of treatment effect made using Monte Carlo simulations with 10,000 iterations each.}
+\label{tab:sate}
+\end{table}
+
+\newpage
+
+<<eval = FALSE, include = FALSE>>=
+set.seed(314)
+
+#### SATE ####
+sate <- function(n, homogenous = TRUE){
+  tau <- numeric(10000)
+  tau_reg <- numeric(10000)
+  Y <- matrix(c(rnorm(n, m = 10, sd = 1)))
+  if(homogenous == TRUE){
+    for(k in 1:10000){
+    X <- matrix(1, nrow = n, ncol = 2 )
+    B <- matrix(NA, nrow = n, ncol = 1)
+    s <- sample(1:n, n/2, replace = FALSE)
+    X[s, 2] <- 0
+    
+    for(i in 1:n){
+      if(X[i, 2] == 1){
+        B[i, 1] <- Y[i, 1] + 2
+      } else {
+        B[i, 1] <- Y[i, 1]
+      }}
+  tib <- as.tibble(cbind(X[, 2], B[, 1]))
+  tib <- tib %>% 
+    group_by(V1) %>%
+    summarize(tau = mean(V2)) %>%
+    pull(tau)
+  
+  tau[k] <- tib[2] - tib[1]
+  tau_reg[k] <- (solve(t(X) %*% X) %*% t(X) %*% B)[2,]
+  }} else {
+    for(k in 1:10000){
+      X <- matrix(1, nrow = n, ncol = 2 )
+      B <- matrix(NA, nrow = n, ncol = 1)
+      s <- sample(1:n, n/2, replace = FALSE)
+      X[s, 2] <- 0
+      
+      for(i in 1:n){
+        if(X[i, 2] == 1){
+          B[i, 1] <- Y[i, 1] + 2 + rnorm(1, m = 0, sd = 2)
+        } else {
+          B[i, 1] <- Y[i, 1]
+        }}
+      tib <- as.tibble(cbind(X[, 2], B[, 1]))
+      tib <- tib %>% 
+        group_by(V1) %>%
+        summarize(tau = mean(V2)) %>%
+        pull(tau)
+      
+      tau[k] <- tib[2] - tib[1]
+      tau_reg[k] <- (solve(t(X) %*% X) %*% t(X) %*% B)[2,])}}
+  out <- cbind(as.matrix(tau), as.matrix(tau_reg))
+  return(out)}
+
+a <- sate(100); b <- sate(200); c <- sate(300)
+
+#### PATE ####
+pate <- function(n, homogenous = TRUE){
+  tau <- numeric(10000)
+  tau_reg <- numeric(10000)
+  if(homogenous == TRUE){
+    for(k in 1:10000){
+      X <- matrix(1, nrow = n, ncol = 2)
+      s <- sample(1:n, n/2, replace = FALSE)
+      X[s, 2] <- 0
+      Y <- matrix(1, nrow = n)
+      
+      for(i in 1:n){
+        if(X[i, 2] == 0){
+          Y[i, 1] = rnorm(1, m = 10, sd = 1)
+        } else {
+          Y[i, 1] = rnorm(1, m = 10, sd = 1) + 2
+        }}
+      tib <- as.tibble(cbind(X[, 2], Y[, 1]))
+      tib <- tib %>% 
+        group_by(V1) %>%
+        summarize(tau = mean(V2)) %>%
+        pull(tau)
+      
+      tau[k] <- tib[2]- tib[1]
+      tau_reg[k] <- (solve(t(X) %*% X) %*% t(X) %*% Y)[2,]
+      }} else {
+      for(k in 1:10000){
+      X <- matrix(1, nrow = n, ncol = 2)
+      s <- sample(1:n, n/2, replace = FALSE)
+      X[s, 2] <- 0
+      Y <- matrix(1, nrow = n)
+      
+      for(i in 1:n){
+        if(X[i, 2] == 0){
+          Y[i, 1] = rnorm(1, m = 10, sd = 1)
+        } else {
+          Y[i, 1] = rnorm(1, m = 10, sd = 1) + 2 + rnorm(1, m = 0, sd = 2) 
+        }}
+      tib <- as.tibble(cbind(X[, 2], Y[, 1]))
+      tib <- tib %>% 
+        group_by(V1) %>%
+        summarize(tau = mean(V2)) %>%
+        pull(tau)
+      
+      tau[k] <- tib[2]- tib[1]
+      tau_reg[k] <- (solve(t(X) %*% X) %*% t(X) %*% Y)[2,] }}
+  out <- cbind(as.matrix(tau), as.matrix(tau_reg))
+  return(out)}
+@
+
+
+\end{document}
