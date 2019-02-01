@@ -333,28 +333,29 @@ sate_homo_beta <- ggplot(data = sate_homo, mapping = aes(alpha = 0.3)) +
   scale_fill_manual(name = "Sample Size",values = c("100" = "red","200" = "blue", "300" = "green")) +
   guides(alpha = FALSE)
 
-Y <- matrix(c(rnorm(300, m = 10, sd = 1)))
-st <- numeric(10000)
-
-for(k in 1:10000){
-  X <- matrix(1, nrow = 300, ncol = 2 )
-  B <- matrix(NA, nrow = 300, ncol = 1)
-  s <- sample(1:300, 150, replace = FALSE)
-  X[s, 2] <- 0
+philosophy <- function(n){
+  Y <- matrix(c(rnorm(n, m = 10, sd = 1)))
+  st <- numeric(10000)
   
-  for(i in 1:300){
-    if(X[i, 2] == 1){
-      B[i, 1] <- Y[i, 1] + 2
-    } else {
-      B[i, 1] <- Y[i, 1]
+  for(k in 1:10000){
+    X <- matrix(1, nrow = n, ncol = 2 )
+    B <- matrix(NA, nrow = n, ncol = 1)
+    s <- sample(1:n, n/2, replace = FALSE)
+    X[s, 2] <- 0
+    
+    for(i in 1:n){
+      if(X[i, 2] == 1){
+        B[i, 1] <- Y[i, 1] + 2
+      } else {
+        B[i, 1] <- Y[i, 1]
+      }
     }
+    
+    tib <- as.tibble(cbind(X[, 2], B[, 1]))
+    v <- tib %>% group_by(V1) %>% summarize(s = (sd(V2))^2) %>% pull(s)
+    st[k] <- sqrt(v[1]/(n/2) + v[2]/(n/2))
+    print(k)
   }
-  
-  tib <- as.tibble(cbind(X[, 2], B[, 1]))
-  v <- tib %>% group_by(V1) %>% summarize(s = (sd(V2))^2) %>% pull(s)
-  st[k] <- sqrt(v[1]/150 + v[2]/150)
-  print(k)
+  return(mean(st))
 }
-
-mean(st)
 
