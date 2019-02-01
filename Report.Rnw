@@ -3,6 +3,11 @@
 \usepackage{booktabs}
 \usepackage{graphicx}
 \usepackage[a4paper, total={6in, 8.1in}]{geometry}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{mathrsfs}
 
 \title{Homework 1}
 \author{Valentin Zulj}
@@ -12,6 +17,8 @@
 
 <<include = FALSE>>=
 library(tidyverse)
+library(gridExtra)
+
 sate_homo <- as.tibble(read.csv("sate_homo.csv", header = TRUE))
 sate_hetero <- as.tibble(read.csv("sate_hetero.csv", header = TRUE))
 
@@ -36,12 +43,87 @@ pate_hetero_beta <- ggplot(data = pate_hetero, mapping = aes(alpha = 0.3)) +
   scale_fill_manual(name = "Sample Size",values = c("100" = "red","200" = "blue", "300" = "green")) +
   guides(alpha = FALSE)
 
+pate_homo <- read.csv("pate_homo.csv")
+
+pate_homo_tau <- ggplot(data = pate_homo, mapping = aes(alpha = 0.3)) +
+  geom_density(mapping = aes(x = V5, fill = "300")) +
+  geom_density(mapping = aes(x = V3, fill = "200")) +
+  geom_density(mapping = aes(x = V1, fill = "100")) +
+  labs(y = "Density", x = expression(hat(tau))) +
+  theme_classic() +
+  scale_fill_manual(name = "Sample Size",values = c("100" = "red","200" = "blue", "300" = "green")) +
+  guides(alpha = FALSE)
+
+
+pate_homo_beta <- ggplot(data = pate_homo, mapping = aes(alpha = 0.3)) +
+  geom_density(mapping = aes(x = V6, fill = "300")) +
+  geom_density(mapping = aes(x = V4, fill = "200")) +
+  geom_density(mapping = aes(x = V2, fill = "100")) +
+  labs(y = "Density", x = expression(hat(beta))) +
+  theme_classic() +
+  scale_fill_manual(name = "Sample Size",values = c("100" = "red","200" = "blue", "300" = "green")) +
+  guides(alpha = FALSE)
+
+
+sate_hetero <- read.csv("sate_hetero.csv")
+
+sate_hetero_tau <- ggplot(data = sate_hetero, mapping = aes(alpha = 0.3)) +
+  geom_density(mapping = aes(x = V5, fill = "300")) +
+  geom_density(mapping = aes(x = V3, fill = "200")) +
+  geom_density(mapping = aes(x = V1, fill = "100")) +
+  labs(y = "Density", x = expression(hat(tau))) +
+  theme_classic() +
+  scale_fill_manual(name = "Sample Size",values = c("100" = "red","200" = "blue", "300" = "green")) +
+  guides(alpha = FALSE)
+
+sate_hetero_beta <- ggplot(data = sate_hetero, mapping = aes(alpha = 0.3)) +
+  geom_density(mapping = aes(x = V6, fill = "300")) +
+  geom_density(mapping = aes(x = V4, fill = "200")) +
+  geom_density(mapping = aes(x = V2, fill = "100")) +
+  labs(y = "Density", x = expression(hat(beta))) +
+  theme_classic() +
+  scale_fill_manual(name = "Sample Size",values = c("100" = "red","200" = "blue", "300" = "green")) +
+  guides(alpha = FALSE)
+
+sate_homo <- read.csv("sate_homo.csv")
+
+sate_homo_tau <- ggplot(data = sate_homo, mapping = aes(alpha = 0.3)) +
+  geom_density(mapping = aes(x = V5, fill = "300")) +
+  geom_density(mapping = aes(x = V3, fill = "200")) +
+  geom_density(mapping = aes(x = V1, fill = "100")) +
+  labs(y = "Density", x = expression(hat(tau))) +
+  theme_classic() +
+  scale_fill_manual(name = "Sample Size",values = c("100" = "red","200" = "blue", "300" = "green")) +
+  guides(alpha = FALSE)
+
+
+sate_homo_beta <- ggplot(data = sate_homo, mapping = aes(alpha = 0.3)) +
+  geom_density(mapping = aes(x = V6, fill = "300")) +
+  geom_density(mapping = aes(x = V4, fill = "200")) +
+  geom_density(mapping = aes(x = V2, fill = "100")) +
+  labs(y = "Density", x = expression(hat(beta))) +
+  theme_classic() +
+  scale_fill_manual(name = "Sample Size",values = c("100" = "red","200" = "blue", "300" = "green")) +
+  guides(alpha = FALSE)
 
 @
 
 \maketitle
 
 \section{Estimating The Sample Average Treatment Effect}
+
+In this first part of the assignment, I estimate the sample average treatment effect using 10,000 different allocations and sample sizes of 100, 200, and 300 observations. I do this using both homogenous and heterogeneous treatment effects. Looking at the theoretical outcome, the estimates of the treatment effect -- $\hat{\tau}^{s}$ -- should converge to a normal distribution with mean $\tau$ and variance $V_{\tau \tau}$, where
+\begin{align*}
+ V_{\tau \tau} = \frac{S^{2}_{Y(1)}}{n_{1}} + \frac{S^{2}_{Y(0)}}{n_{0}} - \frac{S^{2}_{\tau}}{n},
+\end{align*}
+\noindent which is often estimated (Neyman) as
+\begin{align*}
+ \hat{V}_{\tau \tau} = \frac{s^{2}_{Y(1)}}{n_{1}} + \frac{s^{2}_{Y(0)}}{n_{0}}.
+\end{align*}
+\noindent I use the Neyman estimator in order to compute the sample variance for each new iteration of my simulation, and us the mean of all estimates as the final theoretical value. The estimations of the theoretical standard deviations are 0.19188 ,0.14234, and 0.11336 for sample sizes of 100, 200, and 300 observations respectively.
+
+As can be seen in Table \ref{tab:sate} and Figure \ref{fig:sate_fig}, the means of the estimator are roughly normal, with means very close to 2, which is the actual treatment effect. Also, the standard deviations found seem to match relatively well with the Neyman estimates. For the heterogeneous case, however, the standard deviations are not as good a match. This is very reasonable, since an extra source of variation has been added.
+
 \begin{table}[ht]
 \centering
 \begin{tabular}{ccccccccc}
@@ -64,6 +146,21 @@ pate_hetero_beta <- ggplot(data = pate_hetero, mapping = aes(alpha = 0.3)) +
 \caption{Estimates of treatment effect made using Monte Carlo simulations with 10,000 iterations each.}
 \label{tab:sate}
 \end{table}
+
+Furhter, it can be seen that the estimates of $\tau$ and $\beta$ are exactly the same, which is perfectly reasonable since the OLS regression uses only a dummy as a covariate, meaning that the coefficient of the covariate will estimate the difference in means between the two groups. 
+
+\newpage
+
+<<sate_fig, echo = FALSE, fig.height = 5, fig.cap = "Distributions of the estimates of the sample treatment effects">>=
+grid.arrange(sate_homo_tau, sate_homo_beta,
+             sate_hetero_tau, sate_hetero_beta,
+             ncol = 2)
+@
+
+
+
+
+
 
 \section{Estimating The Population Average Treatment Effect}
 
@@ -90,111 +187,10 @@ pate_hetero_beta <- ggplot(data = pate_hetero, mapping = aes(alpha = 0.3)) +
 \label{tab:sate}
 \end{table}
 
-\newpage
-
-<<eval = FALSE, include = FALSE>>=
-set.seed(314)
-
-#### SATE ####
-sate <- function(n, homogenous = TRUE){
-  tau <- numeric(10000)
-  tau_reg <- numeric(10000)
-  Y <- matrix(c(rnorm(n, m = 10, sd = 1)))
-  if(homogenous == TRUE){
-    for(k in 1:10000){
-    X <- matrix(1, nrow = n, ncol = 2 )
-    B <- matrix(NA, nrow = n, ncol = 1)
-    s <- sample(1:n, n/2, replace = FALSE)
-    X[s, 2] <- 0
-    
-    for(i in 1:n){
-      if(X[i, 2] == 1){
-        B[i, 1] <- Y[i, 1] + 2
-      } else {
-        B[i, 1] <- Y[i, 1]
-      }}
-  tib <- as.tibble(cbind(X[, 2], B[, 1]))
-  tib <- tib %>% 
-    group_by(V1) %>%
-    summarize(tau = mean(V2)) %>%
-    pull(tau)
-  
-  tau[k] <- tib[2] - tib[1]
-  tau_reg[k] <- (solve(t(X) %*% X) %*% t(X) %*% B)[2,]
-  }} else {
-    for(k in 1:10000){
-      X <- matrix(1, nrow = n, ncol = 2 )
-      B <- matrix(NA, nrow = n, ncol = 1)
-      s <- sample(1:n, n/2, replace = FALSE)
-      X[s, 2] <- 0
-      
-      for(i in 1:n){
-        if(X[i, 2] == 1){
-          B[i, 1] <- Y[i, 1] + 2 + rnorm(1, m = 0, sd = 2)
-        } else {
-          B[i, 1] <- Y[i, 1]
-        }}
-      tib <- as.tibble(cbind(X[, 2], B[, 1]))
-      tib <- tib %>% 
-        group_by(V1) %>%
-        summarize(tau = mean(V2)) %>%
-        pull(tau)
-      
-      tau[k] <- tib[2] - tib[1]
-      tau_reg[k] <- (solve(t(X) %*% X) %*% t(X) %*% B)[2,])}}
-  out <- cbind(as.matrix(tau), as.matrix(tau_reg))
-  return(out)}
-
-a <- sate(100); b <- sate(200); c <- sate(300)
-
-#### PATE ####
-pate <- function(n, homogenous = TRUE){
-  tau <- numeric(10000)
-  tau_reg <- numeric(10000)
-  if(homogenous == TRUE){
-    for(k in 1:10000){
-      X <- matrix(1, nrow = n, ncol = 2)
-      s <- sample(1:n, n/2, replace = FALSE)
-      X[s, 2] <- 0
-      Y <- matrix(1, nrow = n)
-      
-      for(i in 1:n){
-        if(X[i, 2] == 0){
-          Y[i, 1] = rnorm(1, m = 10, sd = 1)
-        } else {
-          Y[i, 1] = rnorm(1, m = 10, sd = 1) + 2
-        }}
-      tib <- as.tibble(cbind(X[, 2], Y[, 1]))
-      tib <- tib %>% 
-        group_by(V1) %>%
-        summarize(tau = mean(V2)) %>%
-        pull(tau)
-      
-      tau[k] <- tib[2]- tib[1]
-      tau_reg[k] <- (solve(t(X) %*% X) %*% t(X) %*% Y)[2,]
-      }} else {
-      for(k in 1:10000){
-      X <- matrix(1, nrow = n, ncol = 2)
-      s <- sample(1:n, n/2, replace = FALSE)
-      X[s, 2] <- 0
-      Y <- matrix(1, nrow = n)
-      
-      for(i in 1:n){
-        if(X[i, 2] == 0){
-          Y[i, 1] = rnorm(1, m = 10, sd = 1)
-        } else {
-          Y[i, 1] = rnorm(1, m = 10, sd = 1) + 2 + rnorm(1, m = 0, sd = 2) 
-        }}
-      tib <- as.tibble(cbind(X[, 2], Y[, 1]))
-      tib <- tib %>% 
-        group_by(V1) %>%
-        summarize(tau = mean(V2)) %>%
-        pull(tau)
-      
-      tau[k] <- tib[2]- tib[1]
-      tau_reg[k] <- (solve(t(X) %*% X) %*% t(X) %*% Y)[2,] }}
-  out <- cbind(as.matrix(tau), as.matrix(tau_reg))
-  return(out)}
+<<pate_fig, echo = FALSE, fig.height = 5, fig.cap = "Distributions of the estimates of the population treatment effects">>=
+grid.arrange(pate_homo_tau, pate_homo_beta,
+             pate_hetero_tau, pate_hetero_beta,
+             ncol = 2)
 @
 
 

@@ -249,11 +249,112 @@ hist(pc1[,2])
 mean(pc1[,1])
 sd((pc1[,2]))
 
-pate_hetero <- cbind(pa1, pb1, pc1)
-write.csv(pate_hetero, "pate_hetero.csv")
+pate_hetero <- read.csv("pate_hetero.csv")
 
-p_h <- as.tibble(read.csv("pate_hetero.csv",header = TRUE))
-p_h
+pate_hetero_tau <- ggplot(data = pate_hetero, mapping = aes(alpha = 0.3)) +
+  geom_density(mapping = aes(x = V5, fill = "300")) +
+  geom_density(mapping = aes(x = V3, fill = "200")) +
+  geom_density(mapping = aes(x = V1, fill = "100")) +
+  labs(y = "Density", x = expression(hat(tau))) +
+  theme_classic() +
+  scale_fill_manual(name = "Sample Size",values = c("100" = "red","200" = "blue", "300" = "green")) +
+  guides(alpha = FALSE)
 
-ggplot(data = p_h, mapping = aes(x = V1)) +
-  geom_density()
+pate_hetero_beta <- ggplot(data = pate_hetero, mapping = aes(alpha = 0.3)) +
+  geom_density(mapping = aes(x = V6, fill = "300")) +
+  geom_density(mapping = aes(x = V4, fill = "200")) +
+  geom_density(mapping = aes(x = V2, fill = "100")) +
+  labs(y = "Density", x = expression(hat(beta))) +
+  theme_classic() +
+  scale_fill_manual(name = "Sample Size",values = c("100" = "red","200" = "blue", "300" = "green")) +
+  guides(alpha = FALSE)
+
+
+pate_homo <- read.csv("pate_homo.csv")
+
+pate_homo_tau <- ggplot(data = pate_homo, mapping = aes(alpha = 0.3)) +
+  geom_density(mapping = aes(x = V5, fill = "300")) +
+  geom_density(mapping = aes(x = V3, fill = "200")) +
+  geom_density(mapping = aes(x = V1, fill = "100")) +
+  labs(y = "Density", x = expression(hat(tau))) +
+  theme_classic() +
+  scale_fill_manual(name = "Sample Size",values = c("100" = "red","200" = "blue", "300" = "green")) +
+  guides(alpha = FALSE)
+
+
+pate_homo_beta <- ggplot(data = pate_homo, mapping = aes(alpha = 0.3)) +
+  geom_density(mapping = aes(x = V6, fill = "300")) +
+  geom_density(mapping = aes(x = V4, fill = "200")) +
+  geom_density(mapping = aes(x = V2, fill = "100")) +
+  labs(y = "Density", x = expression(hat(beta))) +
+  theme_classic() +
+  scale_fill_manual(name = "Sample Size",values = c("100" = "red","200" = "blue", "300" = "green")) +
+  guides(alpha = FALSE)
+
+
+sate_hetero <- read.csv("sate_hetero.csv")
+
+sate_hetero_tau <- ggplot(data = sate_hetero, mapping = aes(alpha = 0.3)) +
+  geom_density(mapping = aes(x = V5, fill = "300")) +
+  geom_density(mapping = aes(x = V3, fill = "200")) +
+  geom_density(mapping = aes(x = V1, fill = "100")) +
+  labs(y = "Density", x = expression(hat(tau))) +
+  theme_classic() +
+  scale_fill_manual(name = "Sample Size",values = c("100" = "red","200" = "blue", "300" = "green")) +
+  guides(alpha = FALSE)
+
+sate_hetero_beta <- ggplot(data = sate_hetero, mapping = aes(alpha = 0.3)) +
+  geom_density(mapping = aes(x = V6, fill = "300")) +
+  geom_density(mapping = aes(x = V4, fill = "200")) +
+  geom_density(mapping = aes(x = V2, fill = "100")) +
+  labs(y = "Density", x = expression(hat(beta))) +
+  theme_classic() +
+  scale_fill_manual(name = "Sample Size",values = c("100" = "red","200" = "blue", "300" = "green")) +
+  guides(alpha = FALSE)
+
+sate_homo <- read.csv("sate_homo.csv")
+
+sate_homo_tau <- ggplot(data = sate_homo, mapping = aes(alpha = 0.3)) +
+  geom_density(mapping = aes(x = V5, fill = "300")) +
+  geom_density(mapping = aes(x = V3, fill = "200")) +
+  geom_density(mapping = aes(x = V1, fill = "100")) +
+  labs(y = "Density", x = expression(hat(tau))) +
+  theme_classic() +
+  scale_fill_manual(name = "Sample Size",values = c("100" = "red","200" = "blue", "300" = "green")) +
+  guides(alpha = FALSE)
+
+
+sate_homo_beta <- ggplot(data = sate_homo, mapping = aes(alpha = 0.3)) +
+  geom_density(mapping = aes(x = V6, fill = "300")) +
+  geom_density(mapping = aes(x = V4, fill = "200")) +
+  geom_density(mapping = aes(x = V2, fill = "100")) +
+  labs(y = "Density", x = expression(hat(beta))) +
+  theme_classic() +
+  scale_fill_manual(name = "Sample Size",values = c("100" = "red","200" = "blue", "300" = "green")) +
+  guides(alpha = FALSE)
+
+Y <- matrix(c(rnorm(300, m = 10, sd = 1)))
+st <- numeric(10000)
+
+for(k in 1:10000){
+  X <- matrix(1, nrow = 300, ncol = 2 )
+  B <- matrix(NA, nrow = 300, ncol = 1)
+  s <- sample(1:300, 150, replace = FALSE)
+  X[s, 2] <- 0
+  
+  for(i in 1:300){
+    if(X[i, 2] == 1){
+      B[i, 1] <- Y[i, 1] + 2
+    } else {
+      B[i, 1] <- Y[i, 1]
+    }
+  }
+  
+  tib <- as.tibble(cbind(X[, 2], B[, 1]))
+  v <- tib %>% group_by(V1) %>% summarize(s = (sd(V2))^2) %>% pull(s)
+  st[k] <- sqrt(v[1]/150 + v[2]/150)
+  print(k)
+}
+
+mean(st)
+
